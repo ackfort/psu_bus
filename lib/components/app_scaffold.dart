@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'custom_navigation_bar.dart';
 import '../screens/route_map_screen.dart';
-import '../screens/live_bus_map_screen.dart';
+import '../screens/map_screen.dart';
 import '../screens/passenger_density_screen.dart';
 
 class AppScaffold extends StatefulWidget {
@@ -16,7 +16,7 @@ class _AppScaffoldState extends State<AppScaffold> {
 
   final List<Widget> _pages = [
     RouteMapScreen(),
-    LiveBusMapScreen(),
+    MapScreen(),
     PassengerDensityScreen(),
   ];
 

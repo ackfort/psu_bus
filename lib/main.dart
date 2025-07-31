@@ -12,6 +12,7 @@ class MyApp extends StatelessWidget {
       title: 'My App',
       theme: ThemeData(useMaterial3: true),
       home: const AppScaffold(), // ใช้ Scaffold หลักที่นี่
+      debugShowCheckedModeBanner: false,
     );
   }
 }
