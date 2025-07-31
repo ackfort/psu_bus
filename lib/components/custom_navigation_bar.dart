@@ -12,27 +12,44 @@ class CustomNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NavigationBar(
-      onDestinationSelected: onTap,
-      indicatorColor: Colors.blue.shade100, // เปลี่ยนสีให้เหมาะกับธีมรถโดยสาร
-      selectedIndex: currentIndex,
-      destinations: const <Widget>[
-        NavigationDestination(
-          selectedIcon: Icon(Icons.directions_bus_filled),
-          icon: Icon(Icons.directions_bus),
-          label: 'เส้นทางเดินรถ',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.map_outlined),
-          selectedIcon: Icon(Icons.map),
-          label: 'แผนที่',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.people_outline),
-          selectedIcon: Icon(Icons.people),
-          label: 'จำนวนผู้ใช้บริการ',
-        ),
-      ],
+    final theme = Theme.of(context);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100, // สีพื้นหลังเข้มขึ้นเล็กน้อย
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: NavigationBar(
+        onDestinationSelected: onTap,
+        selectedIndex: currentIndex,
+        backgroundColor: Colors.transparent, // ใช้สีพื้นหลังจาก Container แทน
+        indicatorColor: theme.colorScheme.primary,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        surfaceTintColor: Colors.transparent,
+        destinations: <Widget>[
+          NavigationDestination(
+            selectedIcon: Icon(Icons.route, color: theme.colorScheme.onPrimary),
+            icon: Icon(Icons.route_outlined, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            label: 'เส้นทาง',
+          ),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.map, color: theme.colorScheme.onPrimary),
+            icon: Icon(Icons.map_outlined, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            label: 'แผนที่',
+          ),
+          NavigationDestination(
+            selectedIcon: Icon(Icons.people, color: theme.colorScheme.onPrimary),
+            icon: Icon(Icons.people_outline, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+            label: 'ผู้โดยสาร',
+          ),
+        ],
+      ),
     );
   }
 }
