@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'dart:ui' as ui; // Import for ui.Image
-import 'package:flutter/services.dart'; // Import for rootBundle
-
+import 'dart:ui' as ui;
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/bus_stop.dart';
 import '../mock_data/bus_stop_mock_data.dart';
+import '../components/bus_stop_bottom_sheet.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -15,12 +16,13 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
-  final LatLng _hatYaiCenter = const LatLng(7.0084, 100.4767); // จุดกลางเมืองหาดใหญ่
+  final LatLng _hatYaiCenter = const LatLng(7.0084, 100.4767);
   bool _isLoading = true;
   final Set<Marker> _markers = {};
-  final Set<Polyline> _polylines = {};
+  BusStop? _selectedBusStop;
+  bool _showBottomSheet = false;
 
-  // Declare BitmapDescriptors for custom markers
+  // Custom marker icons
   BitmapDescriptor? redBusStopIcon;
   BitmapDescriptor? blueBusStopIcon;
   BitmapDescriptor? greenBusStopIcon;
@@ -28,28 +30,40 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    // โหลดรูปภาพ Marker ก่อน แล้วค่อยโหลดข้อมูลแผนที่
     _loadCustomMarkers().then((_) {
       _loadMapData();
-      _simulateLocation(); // จำลองตำแหน่งแทนการใช้ GPS จริง
+      _simulateLocation();
     });
   }
 
-  // Function to load custom marker images
   Future<void> _loadCustomMarkers() async {
-    // กำหนดพาธของรูปภาพในโฟลเดอร์ assets/images และตั้งค่าขนาดใหม่ (เช่น 150)
-    redBusStopIcon = await _getBitmapDescriptorFromAssetBytes('assets/images/bus_stop_red.png', 200); // เพิ่มขนาด Marker
-    blueBusStopIcon = await _getBitmapDescriptorFromAssetBytes('assets/images/bus_stop_blue.png', 200); // เพิ่มขนาด Marker
-    greenBusStopIcon = await _getBitmapDescriptorFromAssetBytes('assets/images/bus_stop_green.png', 200); // เพิ่มขนาด Marker
+    redBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
+      'assets/images/bus_stop_red.png',
+      200,
+    );
+    blueBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
+      'assets/images/bus_stop_blue.png',
+      200,
+    );
+    greenBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
+      'assets/images/bus_stop_green.png',
+      200,
+    );
   }
 
-  // Helper function to convert asset image to BitmapDescriptor
-  // width คือขนาดความกว้างของรูปภาพ Marker ที่ต้องการ (เพื่อควบคุมขนาดบนแผนที่)
-  Future<BitmapDescriptor> _getBitmapDescriptorFromAssetBytes(String path, int width) async {
+  Future<BitmapDescriptor> _getBitmapDescriptorFromAssetBytes(
+    String path,
+    int width,
+  ) async {
     final ByteData byteData = await rootBundle.load(path);
-    final ui.Codec codec = await ui.instantiateImageCodec(byteData.buffer.asUint8List(), targetWidth: width);
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      byteData.buffer.asUint8List(),
+      targetWidth: width,
+    );
     final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    final ByteData? resizedByteData = await frameInfo.image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? resizedByteData = await frameInfo.image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     if (resizedByteData == null) {
       throw Exception("Failed to resize image for BitmapDescriptor: $path");
     }
@@ -59,10 +73,8 @@ class _MapScreenState extends State<MapScreen> {
   void _loadMapData() {
     final busStops = BusStopMockData.busStops;
 
-    // แสดงเฉพาะป้ายจอดรถ และใช้สีตามสาย
     for (final stop in busStops) {
       BitmapDescriptor? markerIcon;
-      // เลือก Marker Icon ตาม busLine
       switch (stop.busLine) {
         case 'red':
           markerIcon = redBusStopIcon;
@@ -74,91 +86,105 @@ class _MapScreenState extends State<MapScreen> {
           markerIcon = greenBusStopIcon;
           break;
         default:
-          markerIcon = BitmapDescriptor.defaultMarker; // ใช้ Marker เริ่มต้นหากไม่มีรูปภาพที่ตรงกัน
+          markerIcon = BitmapDescriptor.defaultMarker;
       }
 
       _markers.add(
         Marker(
           markerId: MarkerId('stop_${stop.stopId}'),
           position: LatLng(stop.latitude, stop.longitude),
-          icon: markerIcon ?? BitmapDescriptor.defaultMarker, // ใช้ custom icon หรือ default หากเป็น null
-          infoWindow: InfoWindow(
-            title: stop.name,
-            snippet: 'สาย ${_getLineName(stop.busLine)} | ผู้รอ: ${stop.passengerCount} คน',
-          ),
+          icon: markerIcon ?? BitmapDescriptor.defaultMarker,
+          onTap: () {
+            setState(() {
+              _selectedBusStop = stop;
+              _showBottomSheet = true;
+            });
+          },
         ),
       );
     }
 
-    // เส้นทางรถโดยสาร (ลบสายสีแดงออก)
-    _polylines.addAll([
-      _createRoute('blue', Colors.blue, busStops),
-      _createRoute('green', Colors.green, busStops),
-      // _createRoute('red', Colors.red, busStops), // บรรทัดนี้ถูกลบออกแล้ว
-    ]);
-
     setState(() => _isLoading = false);
   }
 
-  // สร้าง Polyline สำหรับเส้นทางรถแต่ละสาย
-  Polyline _createRoute(String line, Color color, List<BusStop> stops) {
-    return Polyline(
-      polylineId: PolylineId('route_$line'),
-      points: stops
-          .where((stop) => stop.busLine == line) // กรองเฉพาะป้ายที่อยู่ในสายเดียวกัน
-          .map((stop) => LatLng(stop.latitude, stop.longitude))
-          .toList(),
-      color: color,
-      width: 4,
-    );
-  }
-
-  // ฟังก์ชันช่วยในการแสดงชื่อสายรถ
-  String _getLineName(String line) {
-    switch (line) {
-      case 'red':
-        return 'สายสีแดง';
-      case 'blue':
-        return 'สายสีน้ำเงิน';
-      case 'green':
-        return 'สายสีเขียว';
-      default:
-        return 'สาย $line';
-    }
-  }
-
-  // ฟังก์ชันจำลองการโหลดข้อมูล (สามารถใช้สำหรับ GPS จริงได้ในอนาคต)
   Future<void> _simulateLocation() async {
     await Future.delayed(const Duration(seconds: 1));
-    // สามารถเพิ่มโค้ดสำหรับการขอตำแหน่ง GPS จริงที่นี่
-    // เช่น geolocator package
     setState(() {
       _isLoading = false;
     });
   }
 
+  Future<void> _openGoogleMap(double lat, double lng) async {
+    final Uri url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'ไม่สามารถเปิด Google Maps ได้';
+    }
+  }
+
+  Future<void> _openGoogleMapDirections(double lat, double lng) async {
+    final Uri url = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+    );
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      throw 'ไม่สามารถเปิดโหมดนำทางใน Google Maps ได้';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 10;
+
     return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator()) // แสดง Loading ขณะโหลดข้อมูล
-          : GoogleMap(
-              onMapCreated: (controller) {
-                mapController = controller;
-                // ตั้งค่าเริ่มต้นให้แผนที่โฟกัสไปที่หาดใหญ่
-                controller.animateCamera(
-                  CameraUpdate.newLatLngZoom(_hatYaiCenter, 14),
-                );
-              },
-              initialCameraPosition: CameraPosition(
-                target: _hatYaiCenter,
-                zoom: 14,
+      body: Stack(
+        children: [
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : GoogleMap(
+                  onMapCreated: (controller) {
+                    mapController = controller;
+                    controller.animateCamera(
+                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 14),
+                    );
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _hatYaiCenter,
+                    zoom: 14,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  onTap: (position) {
+                    setState(() {
+                      _showBottomSheet = false;
+                    });
+                  },
+                ),
+          if (_showBottomSheet && _selectedBusStop != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: bottomPadding,
+              child: BusStopBottomSheet(
+                selectedBusStop: _selectedBusStop!,
+                onClose: () {
+                  setState(() {
+                    _showBottomSheet = false;
+                  });
+                },
+                onOpenMap: _openGoogleMap,
+                onOpenDirections: _openGoogleMapDirections,
               ),
-              markers: _markers, // แสดง Marker ที่สร้างขึ้น
-              polylines: _polylines, // แสดง Polyline เส้นทาง
-              myLocationEnabled: true, // เปิดใช้งานปุ่มตำแหน่งปัจจุบันของผู้ใช้
-              myLocationButtonEnabled: true,
             ),
+        ],
+      ),
     );
   }
 }
