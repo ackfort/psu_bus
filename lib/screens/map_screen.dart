@@ -16,7 +16,7 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
-  final LatLng _hatYaiCenter = const LatLng(7.0084, 100.4767);
+  final LatLng _hatYaiCenter = const LatLng(7.007692, 100.500510);
   bool _isLoading = true;
   final Set<Marker> _markers = {};
   BusStop? _selectedBusStop;
@@ -146,27 +146,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                  onMapCreated: (controller) {
-                    mapController = controller;
-                    controller.animateCamera(
-                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 14),
-                    );
-                  },
-                  initialCameraPosition: CameraPosition(
-                    target: _hatYaiCenter,
-                    zoom: 14,
-                  ),
-                  markers: _markers,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                  onTap: (position) {
-                    setState(() {
-                      _showBottomSheet = false;
-                    });
-                  },
+                onMapCreated: (controller) {
+                  mapController = controller;
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                  );
+                },
+                initialCameraPosition: CameraPosition(
+                  target: _hatYaiCenter,
+                  zoom: 17,
                 ),
+                markers: _markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                onTap: (position) {
+                  setState(() {
+                    _showBottomSheet = false;
+                  });
+                },
+              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,
