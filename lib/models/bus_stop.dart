@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BusStop {
   final String stopId;
@@ -17,19 +18,23 @@ class BusStop {
     required this.busLine,
   });
 
-  // ตัวช่วยสำหรับแปลงจาก Firestore
-  factory BusStop.fromFirestore(Map<String, dynamic> data) {
+  /// ✅ ตัวช่วยสำหรับแปลงจาก Firestore Document
+  factory BusStop.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return BusStop(
-      stopId: data['stop_id'] ?? '',
+      stopId: doc.id, // ใช้ documentId ของ Firestore เป็น stopId
       name: data['name'] ?? '',
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
-      passengerCount: data['current_passengers'] ?? 0,
-      busLine: data['bus_line'] ?? 'green',
+      passengerCount:
+          (data['passengerCount'] as num?)?.toInt() ??
+          0, // เปลี่ยนเป็น passengerCount
+      busLine: data['busLine'] ?? 'green', // เปลี่ยนเป็น busLine
     );
   }
 
-  // สีของสายรถตาม busLine
+  // 🔹 สีของสายรถตาม busLine
   Color get lineColor {
     switch (busLine) {
       case 'red':
@@ -42,7 +47,7 @@ class BusStop {
     }
   }
 
-  // ชื่อสายรถแบบเต็ม
+  // 🔹 ชื่อสายรถแบบเต็ม
   String get lineName {
     switch (busLine) {
       case 'red':
@@ -55,14 +60,14 @@ class BusStop {
     }
   }
 
-  // คำนวณสถานะความหนาแน่น
+  // 🔹 คำนวณสถานะความหนาแน่น
   String get status {
     if (passengerCount > 25) return 'หนาแน่นมาก';
     if (passengerCount > 15) return 'ปานกลาง';
     return 'ไม่หนาแน่น';
   }
 
-  // สีสถานะตามจำนวนผู้โดยสาร
+  // 🔹 สีสถานะตามจำนวนผู้โดยสาร
   Color get statusColor {
     if (passengerCount > 25) return Colors.red;
     if (passengerCount > 15) return Colors.orange;

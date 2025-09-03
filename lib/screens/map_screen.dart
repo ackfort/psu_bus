@@ -3,8 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/bus_stop.dart';
-import '../mock_data/bus_stop_mock_data.dart';
 import '../components/bus_stop_bottom_sheet.dart';
 
 class MapScreen extends StatefulWidget {
@@ -30,12 +30,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCustomMarkers().then((_) {
-      _loadMapData();
-      _simulateLocation();
-    });
+    _loadCustomMarkers().then((_) => _loadMapData());
   }
 
+  // โหลด icon marker
   Future<void> _loadCustomMarkers() async {
     redBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_red.png',
@@ -52,68 +50,68 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<BitmapDescriptor> _getBitmapDescriptorFromAssetBytes(
-    String path,
-    int width,
-  ) async {
+      String path, int width) async {
     final ByteData byteData = await rootBundle.load(path);
     final ui.Codec codec = await ui.instantiateImageCodec(
       byteData.buffer.asUint8List(),
       targetWidth: width,
     );
     final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    final ByteData? resizedByteData = await frameInfo.image.toByteData(
-      format: ui.ImageByteFormat.png,
-    );
+    final ByteData? resizedByteData =
+        await frameInfo.image.toByteData(format: ui.ImageByteFormat.png);
     if (resizedByteData == null) {
       throw Exception("Failed to resize image for BitmapDescriptor: $path");
     }
     return BitmapDescriptor.fromBytes(resizedByteData.buffer.asUint8List());
   }
 
-  void _loadMapData() {
-    final busStops = BusStopMockData.busStops;
+  // โหลดข้อมูลจาก Firestore และสร้าง Marker
+  Future<void> _loadMapData() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('busStops').get();
 
-    for (final stop in busStops) {
-      BitmapDescriptor? markerIcon;
-      switch (stop.busLine) {
-        case 'red':
-          markerIcon = redBusStopIcon;
-          break;
-        case 'blue':
-          markerIcon = blueBusStopIcon;
-          break;
-        case 'green':
-          markerIcon = greenBusStopIcon;
-          break;
-        default:
-          markerIcon = BitmapDescriptor.defaultMarker;
+      for (final doc in snapshot.docs) {
+        final stop = BusStop.fromFirestore(doc);
+
+        BitmapDescriptor? markerIcon;
+        switch (stop.busLine) {
+          case 'red':
+            markerIcon = redBusStopIcon;
+            break;
+          case 'blue':
+            markerIcon = blueBusStopIcon;
+            break;
+          case 'green':
+            markerIcon = greenBusStopIcon;
+            break;
+          default:
+            markerIcon = BitmapDescriptor.defaultMarker;
+        }
+
+        _markers.add(
+          Marker(
+            markerId: MarkerId('stop_${stop.stopId}'),
+            position: LatLng(stop.latitude, stop.longitude),
+            icon: markerIcon ?? BitmapDescriptor.defaultMarker,
+            onTap: () {
+              setState(() {
+                _selectedBusStop = stop;
+                _showBottomSheet = true;
+              });
+            },
+          ),
+        );
       }
 
-      _markers.add(
-        Marker(
-          markerId: MarkerId('stop_${stop.stopId}'),
-          position: LatLng(stop.latitude, stop.longitude),
-          icon: markerIcon ?? BitmapDescriptor.defaultMarker,
-          onTap: () {
-            setState(() {
-              _selectedBusStop = stop;
-              _showBottomSheet = true;
-            });
-          },
-        ),
-      );
+      setState(() => _isLoading = false);
+    } catch (e) {
+      debugPrint("โหลดข้อมูลจาก Firestore ล้มเหลว: $e");
+      setState(() => _isLoading = false);
     }
-
-    setState(() => _isLoading = false);
   }
 
-  Future<void> _simulateLocation() async {
-    await Future.delayed(const Duration(seconds: 1));
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
+  // เปิด Google Maps
   Future<void> _openGoogleMap(double lat, double lng) async {
     final Uri url = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
@@ -125,6 +123,7 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // เปิด Google Maps สำหรับนำทาง
   Future<void> _openGoogleMapDirections(double lat, double lng) async {
     final Uri url = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
@@ -146,27 +145,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                onMapCreated: (controller) {
-                  mapController = controller;
-                  controller.animateCamera(
-                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                  );
-                },
-                initialCameraPosition: CameraPosition(
-                  target: _hatYaiCenter,
-                  zoom: 17,
+                  onMapCreated: (controller) {
+                    mapController = controller;
+                    controller.animateCamera(
+                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                    );
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _hatYaiCenter,
+                    zoom: 17,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  onTap: (position) {
+                    setState(() {
+                      _showBottomSheet = false;
+                    });
+                  },
                 ),
-                markers: _markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                onTap: (position) {
-                  setState(() {
-                    _showBottomSheet = false;
-                  });
-                },
-              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,

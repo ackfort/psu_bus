@@ -1,30 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/bus_stop.dart';
-import '../mock_data/bus_stop_mock_data.dart';
+// ลบการ import mock data ออก
+// import '../mock_data/bus_stop_mock_data.dart';
 
 class BusStopBottomSheet extends StatelessWidget {
   final BusStop selectedBusStop;
   final Function() onClose;
   final Function(double, double) onOpenMap;
   final Function(double, double) onOpenDirections;
+  // เพิ่ม Stream สำหรับดึงข้อมูลป้ายอื่นในสายเดียวกัน
+  final Stream<QuerySnapshot> sameLineStopsStream;
 
-  const BusStopBottomSheet({
-    super.key,
-    required this.selectedBusStop,
-    required this.onClose,
-    required this.onOpenMap,
-    required this.onOpenDirections,
-  });
+BusStopBottomSheet({ // ลบ const ออก
+  super.key,
+  required this.selectedBusStop,
+  required this.onClose,
+  required this.onOpenMap,
+  required this.onOpenDirections,
+}) : sameLineStopsStream = FirebaseFirestore.instance
+          .collection('busStops')
+          .where('busLine', isEqualTo: selectedBusStop.busLine)
+          .where(FieldPath.documentId, isNotEqualTo: selectedBusStop.stopId)
+          .snapshots();
 
-  List<BusStop> _getOtherStopsInSameLine() {
-    return BusStopMockData.busStops
-        .where(
-          (stop) =>
-              stop.busLine == selectedBusStop.busLine &&
-              stop.stopId != selectedBusStop.stopId,
-        )
-        .toList();
-  }
+  // ลบ method _getOtherStopsInSameLine() เพราะเราจะใช้ StreamBuilder แทน
 
   // ฟังก์ชันกำหนดสีตามความหนาแน่นสำหรับแต่ละป้าย
   Color _getStopDensityColor(int passengerCount) {
@@ -63,11 +63,6 @@ class BusStopBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sameLineStops = _getOtherStopsInSameLine();
-    final totalPassengers = sameLineStops.fold(
-      selectedBusStop.passengerCount,
-      (sum, stop) => sum + stop.passengerCount,
-    );
     final lineColor = selectedBusStop.lineColor;
 
     return Material(
@@ -157,144 +152,210 @@ class BusStopBottomSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Total line card
+                // Total line card - ใช้ StreamBuilder เพื่อคำนวณแบบ real-time
                 Expanded(
-                  child: _buildInfoCard(
-                    icon: Icons.alt_route,
-                    iconColor: _getLineDensityColor(
-                      totalPassengers,
-                    ), // เปลี่ยนจาก lineColor เป็นสีตามความหนาแน่น
-                    title: 'รวมทั้งสาย',
-                    value: '$totalPassengers คน',
-                    status: _getLineDensityStatus(totalPassengers),
-                    backgroundColor: _getLineDensityBackground(totalPassengers),
-                    valueColor: _getLineDensityColor(totalPassengers),
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: sameLineStopsStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return _buildInfoCard(
+                          icon: Icons.error_outline,
+                          iconColor: Colors.grey,
+                          title: 'รวมทั้งสาย',
+                          value: 'Error',
+                          status: 'เกิดข้อผิดพลาด',
+                          backgroundColor: Colors.grey[100]!,
+                          valueColor: Colors.grey,
+                        );
+                      }
+
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return _buildInfoCard(
+                          icon: Icons.alt_route,
+                          iconColor: Colors.grey,
+                          title: 'รวมทั้งสาย',
+                          value: 'Loading...',
+                          status: 'กำลังโหลด',
+                          backgroundColor: Colors.grey[100]!,
+                          valueColor: Colors.grey,
+                        );
+                      }
+
+                      // คำนวณจำนวนผู้โดยสารรวม
+                      int totalPassengers = selectedBusStop.passengerCount;
+                      if (snapshot.hasData) {
+                        for (var doc in snapshot.data!.docs) {
+                          final stop = BusStop.fromFirestore(doc);
+                          totalPassengers += stop.passengerCount;
+                        }
+                      }
+
+                      return _buildInfoCard(
+                        icon: Icons.alt_route,
+                        iconColor: _getLineDensityColor(totalPassengers),
+                        title: 'รวมทั้งสาย',
+                        value: '$totalPassengers คน',
+                        status: _getLineDensityStatus(totalPassengers),
+                        backgroundColor: _getLineDensityBackground(totalPassengers),
+                        valueColor: _getLineDensityColor(totalPassengers),
+                      );
+                    },
                   ),
                 ),
               ],
             ),
 
-            // Other stops section
-            if (sameLineStops.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
+            // Other stops section - ใช้ StreamBuilder สำหรับป้ายอื่นในสาย
+            const SizedBox(height: 16),
+            StreamBuilder<QuerySnapshot>(
+              stream: sameLineStopsStream,
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'เกิดข้อผิดพลาดในการโหลดข้อมูล: ${snapshot.error}',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+
+                final sameLineStops = snapshot.data!.docs
+                    .map((doc) => BusStop.fromFirestore(doc))
+                    .toList();
+
+                if (sameLineStops.isEmpty) {
+                  return SizedBox(); // ไม่แสดงส่วนนี้ถ้าไม่มีป้ายอื่น
+                }
+
+                return Column(
                   children: [
-                    Icon(Icons.list, size: 18, color: Colors.grey[600]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'ป้ายอื่นในสายนี้',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.list, size: 18, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'ป้ายอื่นในสายนี้',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          const Spacer(),
+                          // Legend
+                          Row(
+                            children: [
+                              _buildDensityLegendItem('น้อย', Colors.green),
+                              const SizedBox(width: 8),
+                              _buildDensityLegendItem('ปานกลาง', Colors.amber),
+                              const SizedBox(width: 8),
+                              _buildDensityLegendItem('มาก', Colors.red),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
-                    // Legend
-                    Row(
-                      children: [
-                        _buildDensityLegendItem('น้อย', Colors.green),
-                        const SizedBox(width: 8),
-                        _buildDensityLegendItem('ปานกลาง', Colors.amber),
-                        const SizedBox(width: 8),
-                        _buildDensityLegendItem('มาก', Colors.red),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 150),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: sameLineStops.length,
-                    itemBuilder: (context, index) {
-                      final stop = sameLineStops[index];
-                      final densityColor = _getStopDensityColor(
-                        stop.passengerCount,
-                      );
-                      return Container(
-                        decoration: BoxDecoration(
-                          color:
-                              index.isOdd ? Colors.grey.shade50 : Colors.white,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  stop.name,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 150),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: sameLineStops.length,
+                          itemBuilder: (context, index) {
+                            final stop = sameLineStops[index];
+                            final densityColor = _getStopDensityColor(
+                              stop.passengerCount,
+                            );
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: index.isOdd ? Colors.grey.shade50 : Colors.white,
                               ),
-                              Container(
+                              child: Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: _getStopDensityBackground(
-                                    stop.passengerCount,
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: densityColor.withOpacity(0.3),
-                                    width: 1,
-                                  ),
+                                  horizontal: 12,
+                                  vertical: 10,
                                 ),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: BoxDecoration(
-                                        color: densityColor,
-                                        shape: BoxShape.circle,
+                                    Expanded(
+                                      child: Text(
+                                        stop.name,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '${stop.passengerCount} คน',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: densityColor,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStopDensityBackground(
+                                          stop.passengerCount,
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: densityColor.withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 8,
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: densityColor,
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            '${stop.passengerCount} คน',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: densityColor,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
 
             // Action buttons
-            // ในส่วนของ Action buttons
             const SizedBox(height: 16),
             Row(
               children: [
