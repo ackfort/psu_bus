@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 import '../models/bus_stop.dart';
 import '../components/bus_stop_bottom_sheet.dart';
 
@@ -21,6 +22,7 @@ class _MapScreenState extends State<MapScreen> {
   final Set<Marker> _markers = {};
   BusStop? _selectedBusStop;
   bool _showBottomSheet = false;
+  Timer? _updateTimer;
 
   // Custom marker icons
   BitmapDescriptor? redBusStopIcon;
@@ -30,7 +32,20 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCustomMarkers().then((_) => _loadMapData());
+    _loadCustomMarkers().then((_) {
+      // โหลดข้อมูลครั้งแรก
+      _loadMapData();
+      // ตั้งค่า Timer ให้อัปเดตทุกๆ 3 วินาที
+      _updateTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+        _updateMarkersOnly(); // เรียกเมธอดใหม่เพื่ออัปเดตเฉพาะ markers
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _updateTimer?.cancel(); // ยกเลิก Timer เมื่อหน้าถูกปิด
+    super.dispose();
   }
 
   // โหลด icon marker
@@ -65,56 +80,92 @@ class _MapScreenState extends State<MapScreen> {
     return BitmapDescriptor.fromBytes(resizedByteData.buffer.asUint8List());
   }
 
-  // โหลดข้อมูลจาก Firestore และสร้าง Marker
+  // เมธอดสำหรับโหลดข้อมูลครั้งแรก
   Future<void> _loadMapData() async {
     try {
       final snapshot =
           await FirebaseFirestore.instance.collection('busStops').get();
-
-      for (final doc in snapshot.docs) {
-        final stop = BusStop.fromFirestore(doc);
-
-        BitmapDescriptor? markerIcon;
-        switch (stop.busLine) {
-          case 'red':
-            markerIcon = redBusStopIcon;
-            break;
-          case 'blue':
-            markerIcon = blueBusStopIcon;
-            break;
-          case 'green':
-            markerIcon = greenBusStopIcon;
-            break;
-          default:
-            markerIcon = BitmapDescriptor.defaultMarker;
-        }
-
-        _markers.add(
-          Marker(
-            markerId: MarkerId('stop_${stop.stopId}'),
-            position: LatLng(stop.latitude, stop.longitude),
-            icon: markerIcon ?? BitmapDescriptor.defaultMarker,
-            onTap: () {
-              setState(() {
-                _selectedBusStop = stop;
-                _showBottomSheet = true;
-              });
-            },
-          ),
-        );
-      }
-
-      setState(() => _isLoading = false);
+      _createMarkersFromSnapshot(snapshot);
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       debugPrint("โหลดข้อมูลจาก Firestore ล้มเหลว: $e");
       setState(() => _isLoading = false);
     }
   }
 
+  // เมธอดใหม่: อัปเดตเฉพาะ markers โดยไม่ต้อง rebuild ทั้งหน้า
+  Future<void> _updateMarkersOnly() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('busStops').get();
+      final Set<Marker> newMarkers = _createMarkersFromSnapshot(snapshot);
+
+      // ตรวจสอบว่ามีข้อมูลเปลี่ยนแปลงหรือไม่ก่อนเรียก setState
+      if (!setEquals(_markers, newMarkers)) {
+        setState(() {
+          _markers.clear();
+          _markers.addAll(newMarkers);
+        });
+      }
+    } catch (e) {
+      debugPrint("อัปเดตข้อมูลจาก Firestore ล้มเหลว: $e");
+    }
+  }
+
+  // Helper method: สร้าง markers จาก snapshot
+  Set<Marker> _createMarkersFromSnapshot(
+      QuerySnapshot<Map<String, dynamic>> snapshot) {
+    final Set<Marker> markers = {};
+    for (final doc in snapshot.docs) {
+      final stop = BusStop.fromFirestore(doc);
+      BitmapDescriptor? markerIcon;
+      switch (stop.busLine) {
+        case 'red':
+          markerIcon = redBusStopIcon;
+          break;
+        case 'blue':
+          markerIcon = blueBusStopIcon;
+          break;
+        case 'green':
+          markerIcon = greenBusStopIcon;
+          break;
+        default:
+          markerIcon = BitmapDescriptor.defaultMarker;
+      }
+      markers.add(
+        Marker(
+          markerId: MarkerId('stop_${stop.stopId}'),
+          position: LatLng(stop.latitude, stop.longitude),
+          icon: markerIcon ?? BitmapDescriptor.defaultMarker,
+          onTap: () {
+            setState(() {
+              _selectedBusStop = stop;
+              _showBottomSheet = true;
+            });
+          },
+        ),
+      );
+    }
+    return markers;
+  }
+
+  // Helper method เพื่อเปรียบเทียบ Set
+  bool setEquals(Set? set1, Set? set2) {
+    if (set1 == null && set2 == null) {
+      return true;
+    }
+    if (set1 == null || set2 == null || set1.length != set2.length) {
+      return false;
+    }
+    return set1.every((element) => set2.contains(element));
+  }
+
   // เปิด Google Maps
   Future<void> _openGoogleMap(double lat, double lng) async {
     final Uri url = Uri.parse(
-      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+      'http://maps.google.com/?q=$lat,$lng',
     );
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -126,7 +177,7 @@ class _MapScreenState extends State<MapScreen> {
   // เปิด Google Maps สำหรับนำทาง
   Future<void> _openGoogleMapDirections(double lat, double lng) async {
     final Uri url = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng&travelmode=driving',
+      'google.navigation:q=$lat,$lng',
     );
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
