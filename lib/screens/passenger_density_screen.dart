@@ -15,32 +15,11 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
   String selectedLine = 'ทั้งหมด';
   bool showBusStops = true;
 
-  List<BusStop> busStops = [];
-  bool _isLoading = true;
-
+  // No longer need _loadBusStops() method or busStops list
+  // The StreamBuilder will handle the data stream.
   @override
   void initState() {
     super.initState();
-    _loadBusStops();
-  }
-
-  Future<void> _loadBusStops() async {
-    try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('busStops').get();
-
-      busStops = snapshot.docs.map((doc) => BusStop.fromFirestore(doc)).toList();
-
-      setState(() => _isLoading = false);
-    } catch (e) {
-      debugPrint("โหลดข้อมูลป้ายรถเมล์ล้มเหลว: $e");
-      setState(() => _isLoading = false);
-    }
-  }
-
-  List<BusStop> get filteredBusStops {
-    if (selectedLine == 'ทั้งหมด') return busStops;
-    return busStops.where((stop) => stop.lineName == selectedLine).toList();
   }
 
   @override
@@ -48,38 +27,81 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // ส่วน filter
+          // Filter section remains the same
           DensityFilterSection(
             selectedLine: selectedLine,
             onLineChanged: (newLine) => setState(() => selectedLine = newLine),
-            showBuses: false, // ปิด bus
+            showBuses: false,
             onBusesChanged: (_) {},
             showBusStops: showBusStops,
             onBusStopsChanged: (selected) => setState(() => showBusStops = selected),
           ),
 
+          // Use StreamBuilder to listen for real-time updates
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        if (showBusStops) ...[
-                          _buildSectionHeader('ป้ายรถเมล์ทั้งหมด'),
-                          ...filteredBusStops
-                              .map((stop) => BusStopDensityCard(busStop: stop))
-                              .toList(),
-                        ],
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('busStops').snapshots(),
+              builder: (context, snapshot) {
+                // Handle error state
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text('เกิดข้อผิดพลาดในการโหลดข้อมูล'),
+                  );
+                }
+
+                // Handle loading state
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                // Convert snapshot to a list of BusStop objects
+                final allBusStops = snapshot.data!.docs
+                    .map((doc) => BusStop.fromFirestore(doc))
+                    .toList();
+
+                // Apply the filter
+                final filteredBusStops = allBusStops
+                    .where((stop) =>
+                        selectedLine == 'ทั้งหมด' ||
+                        stop.lineName == selectedLine)
+                    .toList();
+
+                // Display the filtered data
+                return SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      if (showBusStops) ...[
+                        _buildSectionHeader('ป้ายรถเมล์ทั้งหมด', filteredBusStops.length),
+                        ...filteredBusStops
+                            .map((stop) => BusStopDensityCard(busStop: stop))
+                            .toList(),
+                        const SizedBox(height: 16),
                       ],
-                    ),
+                      if (filteredBusStops.isEmpty && showBusStops)
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              'ไม่พบป้ายรถเมล์ในสายนี้',
+                              style: TextStyle(fontSize: 16, color: Colors.grey),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  // Adjusted _buildSectionHeader to accept a count
+  Widget _buildSectionHeader(String title, int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
@@ -92,7 +114,7 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
           ),
           const Spacer(),
           Text(
-            '${filteredBusStops.length} รายการ',
+            '$count รายการ',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Colors.grey.shade600,
                 ),
