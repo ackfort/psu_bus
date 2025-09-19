@@ -1,3 +1,4 @@
+//map_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
@@ -65,15 +66,18 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<BitmapDescriptor> _getBitmapDescriptorFromAssetBytes(
-      String path, int width) async {
+    String path,
+    int width,
+  ) async {
     final ByteData byteData = await rootBundle.load(path);
     final ui.Codec codec = await ui.instantiateImageCodec(
       byteData.buffer.asUint8List(),
       targetWidth: width,
     );
     final ui.FrameInfo frameInfo = await codec.getNextFrame();
-    final ByteData? resizedByteData =
-        await frameInfo.image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? resizedByteData = await frameInfo.image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     if (resizedByteData == null) {
       throw Exception("Failed to resize image for BitmapDescriptor: $path");
     }
@@ -116,7 +120,8 @@ class _MapScreenState extends State<MapScreen> {
 
   // Helper method: สร้าง markers จาก snapshot
   Set<Marker> _createMarkersFromSnapshot(
-      QuerySnapshot<Map<String, dynamic>> snapshot) {
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
     final Set<Marker> markers = {};
     for (final doc in snapshot.docs) {
       final stop = BusStop.fromFirestore(doc);
@@ -164,9 +169,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // เปิด Google Maps
   Future<void> _openGoogleMap(double lat, double lng) async {
-    final Uri url = Uri.parse(
-      'http://maps.google.com/?q=$lat,$lng',
-    );
+    final Uri url = Uri.parse('http://maps.google.com/?q=$lat,$lng');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -176,9 +179,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // เปิด Google Maps สำหรับนำทาง
   Future<void> _openGoogleMapDirections(double lat, double lng) async {
-    final Uri url = Uri.parse(
-      'google.navigation:q=$lat,$lng',
-    );
+    final Uri url = Uri.parse('google.navigation:q=$lat,$lng');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -196,27 +197,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                  onMapCreated: (controller) {
-                    mapController = controller;
-                    controller.animateCamera(
-                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                    );
-                  },
-                  initialCameraPosition: CameraPosition(
-                    target: _hatYaiCenter,
-                    zoom: 17,
-                  ),
-                  markers: _markers,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                  onTap: (position) {
-                    setState(() {
-                      _showBottomSheet = false;
-                    });
-                  },
+                onMapCreated: (controller) {
+                  mapController = controller;
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                  );
+                },
+                initialCameraPosition: CameraPosition(
+                  target: _hatYaiCenter,
+                  zoom: 17,
                 ),
+                markers: _markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                onTap: (position) {
+                  setState(() {
+                    _showBottomSheet = false;
+                  });
+                },
+              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,
@@ -224,6 +225,8 @@ class _MapScreenState extends State<MapScreen> {
               bottom: bottomPadding,
               child: BusStopBottomSheet(
                 selectedBusStop: _selectedBusStop!,
+                selectedBusStopId: _selectedBusStop!.stopId, // เพิ่มบรรทัดนี้
+                selectedBusLine: _selectedBusStop!.busLine, // เพิ่มบรรทัดนี้
                 onClose: () {
                   setState(() {
                     _showBottomSheet = false;

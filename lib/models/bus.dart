@@ -1,3 +1,4 @@
+//bus.dart
 import 'package:flutter/material.dart';
 
 class Bus {
@@ -20,12 +21,13 @@ class Bus {
   // ตัวช่วยสำหรับแปลงจาก Firestore
   factory Bus.fromFirestore(Map<String, dynamic> data) {
     return Bus(
-      busId: data['bus_id'] ?? '',
-      busName: data['bus_name'] ?? '',
+      // แก้ไขชื่อ key ในโค้ดให้ตรงกับชื่อฟิลด์ใน Firebase Console
+      busId: data['busId'] ?? '',
+      busName: data['busName'] ?? '',
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
-      passengerCount: data['passenger_count'] ?? 0,
-      busLine: data['bus_line'] ?? 'green',
+      passengerCount: data['passengerCount'] ?? 0,
+      busLine: data['busLine'] ?? 'green',
     );
   }
 
@@ -42,7 +44,7 @@ class Bus {
     }
   }
 
-    // ชื่อสายรถแบบเต็ม
+  // ชื่อสายรถแบบเต็ม
   String get lineName {
     switch (busLine) {
       case 'red':
@@ -67,5 +69,16 @@ class Bus {
     if (passengerCount > 25) return Colors.red;
     if (passengerCount > 15) return Colors.orange;
     return Colors.green;
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'busId': busId,
+      'busName': busName,
+      'latitude': latitude,
+      'longitude': longitude,
+      'passengerCount': passengerCount,
+      'busLine': busLine,
+    };
   }
 }
