@@ -1,13 +1,12 @@
-//map_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
 import '../models/bus_stop.dart';
 import '../components/bus_stop_bottom_sheet.dart';
+import '../services/firestore_service.dart'; // Import the new service
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -24,6 +23,7 @@ class _MapScreenState extends State<MapScreen> {
   BusStop? _selectedBusStop;
   bool _showBottomSheet = false;
   Timer? _updateTimer;
+  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
 
   // Custom marker icons
   BitmapDescriptor? redBusStopIcon;
@@ -34,22 +34,20 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     _loadCustomMarkers().then((_) {
-      // โหลดข้อมูลครั้งแรก
       _loadMapData();
-      // ตั้งค่า Timer ให้อัปเดตทุกๆ 3 วินาที
       _updateTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-        _updateMarkersOnly(); // เรียกเมธอดใหม่เพื่ออัปเดตเฉพาะ markers
+        _updateMarkersOnly();
       });
     });
   }
 
   @override
   void dispose() {
-    _updateTimer?.cancel(); // ยกเลิก Timer เมื่อหน้าถูกปิด
+    _updateTimer?.cancel();
     super.dispose();
   }
 
-  // โหลด icon marker
+  // Load marker icons
   Future<void> _loadCustomMarkers() async {
     redBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_red.png',
@@ -84,29 +82,28 @@ class _MapScreenState extends State<MapScreen> {
     return BitmapDescriptor.fromBytes(resizedByteData.buffer.asUint8List());
   }
 
-  // เมธอดสำหรับโหลดข้อมูลครั้งแรก
+  // Initial data load using the service layer
   Future<void> _loadMapData() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('busStops').get();
-      _createMarkersFromSnapshot(snapshot);
+      final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
+      final newMarkers = _createMarkers(busStops);
       setState(() {
+        _markers.addAll(newMarkers);
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("โหลดข้อมูลจาก Firestore ล้มเหลว: $e");
+      debugPrint("Failed to load data from Firestore: $e");
       setState(() => _isLoading = false);
     }
   }
 
-  // เมธอดใหม่: อัปเดตเฉพาะ markers โดยไม่ต้อง rebuild ทั้งหน้า
+  // Update only markers using the service layer
   Future<void> _updateMarkersOnly() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('busStops').get();
-      final Set<Marker> newMarkers = _createMarkersFromSnapshot(snapshot);
-
-      // ตรวจสอบว่ามีข้อมูลเปลี่ยนแปลงหรือไม่ก่อนเรียก setState
+      final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
+      final Set<Marker> newMarkers = _createMarkers(busStops);
+      
+      // Use collection.dart's setEquals for robust comparison
       if (!setEquals(_markers, newMarkers)) {
         setState(() {
           _markers.clear();
@@ -114,17 +111,14 @@ class _MapScreenState extends State<MapScreen> {
         });
       }
     } catch (e) {
-      debugPrint("อัปเดตข้อมูลจาก Firestore ล้มเหลว: $e");
+      debugPrint("Failed to update markers from Firestore: $e");
     }
   }
 
-  // Helper method: สร้าง markers จาก snapshot
-  Set<Marker> _createMarkersFromSnapshot(
-    QuerySnapshot<Map<String, dynamic>> snapshot,
-  ) {
+  // Helper method: Create markers from a list of BusStop objects
+  Set<Marker> _createMarkers(List<BusStop> stops) {
     final Set<Marker> markers = {};
-    for (final doc in snapshot.docs) {
-      final stop = BusStop.fromFirestore(doc);
+    for (final stop in stops) {
       BitmapDescriptor? markerIcon;
       switch (stop.busLine) {
         case 'red':
@@ -156,7 +150,7 @@ class _MapScreenState extends State<MapScreen> {
     return markers;
   }
 
-  // Helper method เพื่อเปรียบเทียบ Set
+  // Helper method to compare Sets from collection.dart
   bool setEquals(Set? set1, Set? set2) {
     if (set1 == null && set2 == null) {
       return true;
@@ -167,23 +161,23 @@ class _MapScreenState extends State<MapScreen> {
     return set1.every((element) => set2.contains(element));
   }
 
-  // เปิด Google Maps
+  // Open Google Maps
   Future<void> _openGoogleMap(double lat, double lng) async {
     final Uri url = Uri.parse('http://maps.google.com/?q=$lat,$lng');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      throw 'ไม่สามารถเปิด Google Maps ได้';
+      throw 'Cannot open Google Maps.';
     }
   }
 
-  // เปิด Google Maps สำหรับนำทาง
+  // Open Google Maps for directions
   Future<void> _openGoogleMapDirections(double lat, double lng) async {
     final Uri url = Uri.parse('google.navigation:q=$lat,$lng');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      throw 'ไม่สามารถเปิดโหมดนำทางใน Google Maps ได้';
+      throw 'Cannot open directions in Google Maps.';
     }
   }
 
@@ -197,27 +191,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                onMapCreated: (controller) {
-                  mapController = controller;
-                  controller.animateCamera(
-                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                  );
-                },
-                initialCameraPosition: CameraPosition(
-                  target: _hatYaiCenter,
-                  zoom: 17,
+                  onMapCreated: (controller) {
+                    mapController = controller;
+                    controller.animateCamera(
+                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                    );
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _hatYaiCenter,
+                    zoom: 17,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  onTap: (position) {
+                    setState(() {
+                      _showBottomSheet = false;
+                    });
+                  },
                 ),
-                markers: _markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                onTap: (position) {
-                  setState(() {
-                    _showBottomSheet = false;
-                  });
-                },
-              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,
@@ -225,8 +219,8 @@ class _MapScreenState extends State<MapScreen> {
               bottom: bottomPadding,
               child: BusStopBottomSheet(
                 selectedBusStop: _selectedBusStop!,
-                selectedBusStopId: _selectedBusStop!.stopId, // เพิ่มบรรทัดนี้
-                selectedBusLine: _selectedBusStop!.busLine, // เพิ่มบรรทัดนี้
+                selectedBusStopId: _selectedBusStop!.stopId,
+                selectedBusLine: _selectedBusStop!.busLine,
                 onClose: () {
                   setState(() {
                     _showBottomSheet = false;

@@ -1,9 +1,8 @@
-//bus_stop_bottom_sheet.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/bus_stop.dart';
 import '../models/bus.dart';
+import '../services/firestore_service.dart'; // Import the new service
 
 class BusStopBottomSheet extends StatefulWidget {
   final String selectedBusStopId;
@@ -34,6 +33,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
   List<Bus> _sameLineBuses = [];
   BusStop? _currentBusStop;
   bool _isLoading = true;
+  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
 
   @override
   void initState() {
@@ -52,34 +52,18 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
 
   Future<void> _fetchDataAndUpdate() async {
     try {
-      // Fetch current bus stop data
-      final currentStopDoc = await FirebaseFirestore.instance
-          .collection('busStops')
-          .doc(widget.selectedBusStopId)
-          .get();
-      _currentBusStop = BusStop.fromFirestore(currentStopDoc);
+      // Use the service to fetch all necessary data in one call
+      final data = await _firestoreService.fetchSameLineData(
+        widget.selectedBusLine,
+        widget.selectedBusStopId,
+      );
 
-      // Fetch other stops on the same line
-      final sameLineStopsQuery = await FirebaseFirestore.instance
-          .collection('busStops')
-          .where('busLine', isEqualTo: widget.selectedBusLine)
-          .where(FieldPath.documentId, isNotEqualTo: widget.selectedBusStopId)
-          .get();
-      _sameLineStops = sameLineStopsQuery.docs
-          .map((doc) => BusStop.fromFirestore(doc))
-          .toList();
-
-      // Fetch buses on the same line
-      final sameLineBusesQuery = await FirebaseFirestore.instance
-          .collection('buses')
-          .where('busLine', isEqualTo: widget.selectedBusLine)
-          .get();
-      _sameLineBuses = sameLineBusesQuery.docs
-          .map((doc) => Bus.fromFirestore(doc.data()))
-          .toList();
+      _currentBusStop = data['currentBusStop'];
+      _sameLineStops = data['sameLineStops'];
+      _sameLineBuses = data['sameLineBuses'];
 
       // Calculate total combined passengers
-      int totalCombined = _currentBusStop!.passengerCount;
+      int totalCombined = _currentBusStop?.passengerCount ?? 0;
       for (var stop in _sameLineStops) {
         totalCombined += stop.passengerCount;
       }
@@ -88,10 +72,12 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
       }
 
       // Update state to trigger UI rebuild
-      setState(() {
-        _totalCombinedPassengers = totalCombined;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _totalCombinedPassengers = totalCombined;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       // Handle errors gracefully, for example, by logging or showing a snackbar
       if (mounted) {
@@ -99,7 +85,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
           _isLoading = false;
         });
       }
-      print('Error fetching data: $e');
+      debugPrint('Error fetching data for BusStopBottomSheet: $e');
     }
   }
 

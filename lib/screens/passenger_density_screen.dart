@@ -1,12 +1,12 @@
-//passenger_density_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/bus_stop.dart';
 import '../models/bus.dart';
-import '../components/bus_stop_density_card.dart'; // ยังต้องใช้สำหรับ BusStop
-import '../components/bus_density_card.dart'; // **เพิ่ม import ใหม่สำหรับ BusDensityCard**
+import '../components/bus_stop_density_card.dart';
+import '../components/bus_density_card.dart';
 import '../components/density_filter_section.dart';
 import 'package:collection/collection.dart';
+import '../services/firestore_service.dart'; // Import the new service
 
 class PassengerDensityScreen extends StatefulWidget {
   const PassengerDensityScreen({super.key});
@@ -19,18 +19,13 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
   String selectedLine = 'ทั้งหมด';
   bool showBusStops = true;
   bool showBuses = true;
-
-  @override
-  void initState() {
-    super.initState();
-  }
+  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Column(
         children: [
-          // Filter section remains the same
           DensityFilterSection(
             selectedLine: selectedLine,
             onLineChanged: (newLine) => setState(() => selectedLine = newLine),
@@ -44,10 +39,9 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  // StreamBuilder สำหรับแสดงข้อมูลป้ายรถเมล์ (Bus Stops)
                   if (showBusStops)
                     StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('busStops').snapshots(),
+                      stream: _firestoreService.streamAllBusStops(), // Use the service
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildLoadingIndicator();
@@ -78,10 +72,9 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
                       },
                     ),
 
-                  // StreamBuilder สำหรับแสดงข้อมูลรถเมล์ (Buses)
                   if (showBuses)
                     StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance.collection('buses').snapshots(),
+                      stream: _firestoreService.streamAllBuses(), // Use the service
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildLoadingIndicator();
@@ -126,14 +119,13 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
                                       Text(
                                         lineName,
                                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.grey[800],
-                                        ),
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey[800],
+                                            ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                // **เรียกใช้ BusDensityCard แทน BusStopDensityCard**
                                 ...entry.value.map((bus) => BusDensityCard(bus: bus)).toList(),
                               ];
                             }).toList(),
