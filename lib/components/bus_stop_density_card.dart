@@ -14,8 +14,8 @@ class BusStopDensityCard extends StatelessWidget {
   });
 
   Color _getDensityColor(int passengerCount) {
-    if (passengerCount > 25) return Colors.red;
-    if (passengerCount > 15) return Colors.orange;
+    if (passengerCount > 19) return Colors.red;
+    if (passengerCount > 11) return Colors.orange;
     return Colors.green;
   }
 
@@ -23,9 +23,12 @@ class BusStopDensityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDarkMode ? Colors.grey.shade900 : Colors.white;
-    final Color borderColor = isSelected 
-        ? busStop.lineColor 
-        : isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
+    final Color borderColor =
+        isSelected
+            ? busStop.lineColor
+            : isDarkMode
+            ? Colors.grey.shade700
+            : Colors.grey.shade300;
     final Color textColor = isDarkMode ? Colors.white : Colors.grey.shade800;
     final densityColor = _getDensityColor(busStop.passengerCount);
 
@@ -38,10 +41,7 @@ class BusStopDensityCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1,
-            ),
+            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1),
             boxShadow: [
               if (!isDarkMode)
                 BoxShadow(
@@ -66,7 +66,7 @@ class BusStopDensityCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +81,10 @@ class BusStopDensityCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: busStop.lineColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -98,22 +101,28 @@ class BusStopDensityCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
+                  // bus_stop_density_card.dart (โค้ดที่ปรับปรุง)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: densityColor.withOpacity(0.1),
+                      // ใช้ busStop.statusColor แทนตัวแปร densityColor
+                      color: busStop.statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: densityColor.withOpacity(0.3),
+                        color: busStop.statusColor.withOpacity(0.3),
                         width: 1,
                       ),
                     ),
                     child: Text(
-                      busStop.passengerCount > 25 ? 'แน่นมาก' 
-                          : busStop.passengerCount > 15 ? 'ปานกลาง' : 'ไม่หนาแน่น',
+                      // ใช้งาน busStop.status เพื่อแสดงสถานะความหนาแน่น
+                      busStop.status,
                       style: TextStyle(
-                        color: densityColor,
+                        // ใช้ busStop.statusColor สำหรับสีข้อความ
+                        color: busStop.statusColor,
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -123,7 +132,7 @@ class BusStopDensityCard extends StatelessWidget {
               ),
 
               const SizedBox(height: 12),
-              
+
               Row(
                 children: [
                   Container(
@@ -141,10 +150,7 @@ class BusStopDensityCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'ผู้โดยสาร',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                   ),
                   const SizedBox(width: 4),
                   Text(

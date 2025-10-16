@@ -59,15 +59,15 @@ class Bus {
 
   // คำนวณสถานะความหนาแน่น
   String get status {
-    if (passengerCount > 25) return 'หนาแน่นมาก';
-    if (passengerCount > 15) return 'ปานกลาง';
+    if (passengerCount > 19) return 'หนาแน่นมาก';
+    if (passengerCount > 11) return 'ปานกลาง';
     return 'ไม่หนาแน่น';
   }
 
   // สีสถานะตามจำนวนผู้โดยสาร
   Color get statusColor {
-    if (passengerCount > 25) return Colors.red;
-    if (passengerCount > 15) return Colors.orange;
+    if (passengerCount > 19) return Colors.red;
+    if (passengerCount > 11) return Colors.orange;
     return Colors.green;
   }
 

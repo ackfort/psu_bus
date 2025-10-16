@@ -23,7 +23,8 @@ class _MapScreenState extends State<MapScreen> {
   BusStop? _selectedBusStop;
   bool _showBottomSheet = false;
   Timer? _updateTimer;
-  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
+  final FirestoreService _firestoreService =
+      FirestoreService(); // Instantiate the service
 
   // Custom marker icons
   BitmapDescriptor? redBusStopIcon;
@@ -59,7 +60,7 @@ class _MapScreenState extends State<MapScreen> {
     );
     greenBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_green.png',
-      200,
+      80,
     );
   }
 
@@ -102,7 +103,7 @@ class _MapScreenState extends State<MapScreen> {
     try {
       final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
       final Set<Marker> newMarkers = _createMarkers(busStops);
-      
+
       // Use collection.dart's setEquals for robust comparison
       if (!setEquals(_markers, newMarkers)) {
         setState(() {
@@ -191,27 +192,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                  onMapCreated: (controller) {
-                    mapController = controller;
-                    controller.animateCamera(
-                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                    );
-                  },
-                  initialCameraPosition: CameraPosition(
-                    target: _hatYaiCenter,
-                    zoom: 17,
-                  ),
-                  markers: _markers,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  zoomControlsEnabled: false,
-                  mapToolbarEnabled: false,
-                  onTap: (position) {
-                    setState(() {
-                      _showBottomSheet = false;
-                    });
-                  },
+                onMapCreated: (controller) {
+                  mapController = controller;
+                  controller.animateCamera(
+                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                  );
+                },
+                initialCameraPosition: CameraPosition(
+                  target: _hatYaiCenter,
+                  zoom: 17,
                 ),
+                markers: _markers,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+                zoomControlsEnabled: false,
+                mapToolbarEnabled: false,
+                onTap: (position) {
+                  setState(() {
+                    _showBottomSheet = false;
+                  });
+                },
+              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,

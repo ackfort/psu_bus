@@ -33,7 +33,8 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
   List<Bus> _sameLineBuses = [];
   BusStop? _currentBusStop;
   bool _isLoading = true;
-  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
+  final FirestoreService _firestoreService =
+      FirestoreService(); // Instantiate the service
 
   @override
   void initState() {
@@ -89,18 +90,13 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     }
   }
 
-  Color _getStopDensityColor(int passengerCount) {
-    if (passengerCount > 25) return Colors.red[600]!;
-    if (passengerCount > 15) return Colors.orange[600]!;
-    return Colors.green[600]!;
-  }
+  // ❌ ลบฟังก์ชันที่ซ้ำซ้อนกับ BusStop Model
+  /*
+  Color _getStopDensityColor(int passengerCount) { ... }
+  Color _getStopDensityBackground(int passengerCount) { ... }
+  */
 
-  Color _getStopDensityBackground(int passengerCount) {
-    if (passengerCount > 25) return Colors.red[50]!;
-    if (passengerCount > 15) return Colors.orange[50]!;
-    return Colors.green[50]!;
-  }
-
+  // ✅ เก็บ Logic สำหรับการรวมทั้งสายไว้ที่นี่ เนื่องจากเป็น Logic เฉพาะของ Widget นี้
   Color _getLineDensityColor(int totalPassengers) {
     if (totalPassengers >= 200) return Colors.red[600]!;
     if (totalPassengers >= 100) return Colors.amber[600]!;
@@ -125,7 +121,11 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
       return Container(); // Or a loading indicator
     }
 
+    // 🌟 ใช้ Getter จาก Model โดยตรง
     final lineColor = _currentBusStop!.lineColor;
+    // final stopStatusColor = _currentBusStop!.statusColor;
+    // final stopStatus = _currentBusStop!.status;
+
     final bottomPadding = MediaQuery.of(context).padding.bottom + 10;
 
     return Positioned(
@@ -198,12 +198,16 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                   Expanded(
                     child: _buildInfoCard(
                       icon: Icons.directions_bus,
-                      iconColor: _getStopDensityColor(_currentBusStop!.passengerCount),
+                      // 🌟 ใช้ Getter จาก BusStop Model
+                      iconColor: _currentBusStop!.statusColor, 
                       title: 'ป้ายนี้',
                       value: '${_currentBusStop!.passengerCount} คน',
-                      status: _currentBusStop!.status,
-                      backgroundColor: _getStopDensityBackground(_currentBusStop!.passengerCount),
-                      valueColor: _getStopDensityColor(_currentBusStop!.passengerCount),
+                      // 🌟 ใช้ Getter จาก BusStop Model
+                      status: _currentBusStop!.status, 
+                      // 🌟 ใช้ Getter จาก BusStop Model (สมมติว่าคุณต้องการสีอ่อน)
+                      backgroundColor: _currentBusStop!.statusColor.withOpacity(0.08), 
+                      // 🌟 ใช้ Getter จาก BusStop Model
+                      valueColor: _currentBusStop!.statusColor, 
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -214,8 +218,12 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                       title: 'รวมทั้งสาย',
                       value: '$_totalCombinedPassengers คน',
                       status: _getLineDensityStatus(_totalCombinedPassengers),
-                      backgroundColor: _getLineDensityBackground(_totalCombinedPassengers),
-                      valueColor: _getLineDensityColor(_totalCombinedPassengers),
+                      backgroundColor: _getLineDensityBackground(
+                        _totalCombinedPassengers,
+                      ),
+                      valueColor: _getLineDensityColor(
+                        _totalCombinedPassengers,
+                      ),
                     ),
                   ),
                 ],
@@ -266,13 +274,20 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                           itemCount: _sameLineStops.length,
                           itemBuilder: (context, index) {
                             final stop = _sameLineStops[index];
-                            final densityColor = _getStopDensityColor(stop.passengerCount);
+                            // 🌟 ใช้ Getter จาก BusStop Model
+                            final densityColor = stop.statusColor; 
                             return Container(
                               decoration: BoxDecoration(
-                                color: index.isOdd ? Colors.grey.shade50 : Colors.white,
+                                color:
+                                    index.isOdd
+                                        ? Colors.grey.shade50
+                                        : Colors.white,
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -287,9 +302,13 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: _getStopDensityBackground(stop.passengerCount),
+                                        // 🌟 ใช้ Getter จาก BusStop Model
+                                        color: densityColor.withOpacity(0.08), 
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: densityColor.withOpacity(0.3),
@@ -303,7 +322,8 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                             width: 8,
                                             height: 8,
                                             decoration: BoxDecoration(
-                                              color: densityColor,
+                                              // 🌟 ใช้ Getter จาก BusStop Model
+                                              color: densityColor, 
                                               shape: BoxShape.circle,
                                             ),
                                           ),
@@ -313,7 +333,8 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
-                                              color: densityColor,
+                                              // 🌟 ใช้ Getter จาก BusStop Model
+                                              color: densityColor, 
                                             ),
                                           ),
                                         ],
@@ -339,7 +360,11 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
                         children: [
-                          Icon(Icons.directions_bus_filled, size: 18, color: Colors.grey[600]),
+                          Icon(
+                            Icons.directions_bus_filled,
+                            size: 18,
+                            color: Colors.grey[600],
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             'รถเมล์ในสายนี้',
@@ -366,12 +391,19 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                           itemCount: _sameLineBuses.length,
                           itemBuilder: (context, index) {
                             final bus = _sameLineBuses[index];
+                            // 🌟 โค้ดส่วนนี้ใช้ bus.statusColor อยู่แล้ว ซึ่งมาจาก Bus Model
                             return Container(
                               decoration: BoxDecoration(
-                                color: index.isOdd ? Colors.grey.shade50 : Colors.white,
+                                color:
+                                    index.isOdd
+                                        ? Colors.grey.shade50
+                                        : Colors.white,
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
                                 child: Row(
                                   children: [
                                     Expanded(
@@ -386,12 +418,19 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                       ),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
                                       decoration: BoxDecoration(
-                                        color: bus.statusColor.withOpacity(0.08),
+                                        color: bus.statusColor.withOpacity(
+                                          0.08,
+                                        ),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                          color: bus.statusColor.withOpacity(0.3),
+                                          color: bus.statusColor.withOpacity(
+                                            0.3,
+                                          ),
                                           width: 1,
                                         ),
                                       ),
@@ -433,17 +472,30 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      icon: Icon(Icons.map_outlined, size: 20, color: lineColor),
+                      icon: Icon(
+                        Icons.map_outlined,
+                        size: 20,
+                        color: lineColor,
+                      ),
                       label: Text(
                         'ดูบนแผนที่',
-                        style: TextStyle(color: lineColor, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: lineColor,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      onPressed: () => widget.onOpenMap(_currentBusStop!.latitude, _currentBusStop!.longitude),
+                      onPressed:
+                          () => widget.onOpenMap(
+                            _currentBusStop!.latitude,
+                            _currentBusStop!.longitude,
+                          ),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: lineColor,
                         side: BorderSide(color: lineColor.withOpacity(0.5)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         backgroundColor: Colors.white,
                       ),
                     ),
@@ -451,17 +503,30 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.directions, size: 20, color: Colors.white),
+                      icon: const Icon(
+                        Icons.directions,
+                        size: 20,
+                        color: Colors.white,
+                      ),
                       label: const Text(
                         'นำทาง',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      onPressed: () => widget.onOpenDirections(_currentBusStop!.latitude, _currentBusStop!.longitude),
+                      onPressed:
+                          () => widget.onOpenDirections(
+                            _currentBusStop!.latitude,
+                            _currentBusStop!.longitude,
+                          ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: lineColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         elevation: 2,
                         shadowColor: lineColor.withOpacity(0.3),
                       ),
@@ -476,6 +541,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     );
   }
 
+  // ℹ️ Widget ส่วนนี้ไม่มีการเปลี่ยนแปลง
   Widget _buildDensityLegendItem(String text, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -491,6 +557,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     );
   }
 
+  // ℹ️ Widget ส่วนนี้ไม่มีการเปลี่ยนแปลง
   Widget _buildInfoCard({
     required IconData icon,
     required Color iconColor,
