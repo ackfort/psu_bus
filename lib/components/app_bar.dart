@@ -20,9 +20,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       title: LayoutBuilder(
         builder: (context, constraints) {
-          // ตรวจสอบความกว้างที่ใช้ได้
-          final availableWidth =
-              constraints.maxWidth - 120; // ลบพื้นที่ปุ่ม action
+          final availableWidth = constraints.maxWidth - 120;
 
           return Row(
             mainAxisSize: MainAxisSize.min,
@@ -53,17 +51,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  // คำนวณขนาดฟอนต์ตามความกว้างที่ใช้ได้
   double _calculateFontSize(double availableWidth) {
     const fullText = 'PSU Passenger Counting System';
     const baseFontSize = 20.0;
     const minFontSize = 14.0;
 
-    // คำนวณความยาวข้อความโดยประมาณ
     final textWidth = fullText.length * baseFontSize * 0.6;
 
     if (textWidth > availableWidth) {
-      // ปรับขนาดฟอนต์ตามสัดส่วน
       final adjustedSize = availableWidth / fullText.length / 0.6;
       return adjustedSize.clamp(minFontSize, baseFontSize);
     }

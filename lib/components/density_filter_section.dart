@@ -36,7 +36,6 @@ class DensityFilterSection extends StatelessWidget {
       margin: const EdgeInsets.all(12),
       child: Column(
         children: [
-          // กรองตามสาย
           Row(
             children: [
               const Icon(Icons.directions_bus, size: 20),
@@ -71,7 +70,6 @@ class DensityFilterSection extends StatelessWidget {
           
           const SizedBox(height: 8),
           
-          // กรองตามประเภท
           Row(
             children: [
               const Icon(Icons.filter_alt_outlined, size: 20),

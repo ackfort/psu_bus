@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import '../models/bus_stop.dart';
 import '../components/bus_stop_bottom_sheet.dart';
-import '../services/firestore_service.dart'; // Import the new service
+import '../services/firestore_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -24,9 +24,8 @@ class _MapScreenState extends State<MapScreen> {
   bool _showBottomSheet = false;
   Timer? _updateTimer;
   final FirestoreService _firestoreService =
-      FirestoreService(); // Instantiate the service
+      FirestoreService();
 
-  // Custom marker icons
   BitmapDescriptor? redBusStopIcon;
   BitmapDescriptor? blueBusStopIcon;
   BitmapDescriptor? greenBusStopIcon;
@@ -48,7 +47,6 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  // Load marker icons
   Future<void> _loadCustomMarkers() async {
     redBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_red.png',
@@ -83,7 +81,6 @@ class _MapScreenState extends State<MapScreen> {
     return BitmapDescriptor.fromBytes(resizedByteData.buffer.asUint8List());
   }
 
-  // Initial data load using the service layer
   Future<void> _loadMapData() async {
     try {
       final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
@@ -98,13 +95,11 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Update only markers using the service layer
   Future<void> _updateMarkersOnly() async {
     try {
       final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
       final Set<Marker> newMarkers = _createMarkers(busStops);
 
-      // Use collection.dart's setEquals for robust comparison
       if (!setEquals(_markers, newMarkers)) {
         setState(() {
           _markers.clear();
@@ -116,7 +111,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Helper method: Create markers from a list of BusStop objects
   Set<Marker> _createMarkers(List<BusStop> stops) {
     final Set<Marker> markers = {};
     for (final stop in stops) {
@@ -151,7 +145,6 @@ class _MapScreenState extends State<MapScreen> {
     return markers;
   }
 
-  // Helper method to compare Sets from collection.dart
   bool setEquals(Set? set1, Set? set2) {
     if (set1 == null && set2 == null) {
       return true;
@@ -162,9 +155,9 @@ class _MapScreenState extends State<MapScreen> {
     return set1.every((element) => set2.contains(element));
   }
 
-  // Open Google Maps
   Future<void> _openGoogleMap(double lat, double lng) async {
-    final Uri url = Uri.parse('http://maps.google.com/?q=$lat,$lng');
+    // Corrected Uri to open a general map view focused on the location
+    final Uri url = Uri.parse('https://maps.google.com/?q=$lat,$lng');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
@@ -172,7 +165,6 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // Open Google Maps for directions
   Future<void> _openGoogleMapDirections(double lat, double lng) async {
     final Uri url = Uri.parse('google.navigation:q=$lat,$lng');
     if (await canLaunchUrl(url)) {
@@ -192,27 +184,27 @@ class _MapScreenState extends State<MapScreen> {
           _isLoading
               ? const Center(child: CircularProgressIndicator())
               : GoogleMap(
-                onMapCreated: (controller) {
-                  mapController = controller;
-                  controller.animateCamera(
-                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                  );
-                },
-                initialCameraPosition: CameraPosition(
-                  target: _hatYaiCenter,
-                  zoom: 17,
+                  onMapCreated: (controller) {
+                    mapController = controller;
+                    controller.animateCamera(
+                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                    );
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _hatYaiCenter,
+                    zoom: 17,
+                  ),
+                  markers: _markers,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
+                  onTap: (position) {
+                    setState(() {
+                      _showBottomSheet = false;
+                    });
+                  },
                 ),
-                markers: _markers,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: false,
-                mapToolbarEnabled: false,
-                onTap: (position) {
-                  setState(() {
-                    _showBottomSheet = false;
-                  });
-                },
-              ),
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,

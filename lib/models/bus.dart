@@ -1,4 +1,3 @@
-//bus.dart
 import 'package:flutter/material.dart';
 
 class Bus {
@@ -18,10 +17,8 @@ class Bus {
     required this.busLine,
   });
 
-  // ตัวช่วยสำหรับแปลงจาก Firestore
   factory Bus.fromFirestore(Map<String, dynamic> data) {
     return Bus(
-      // แก้ไขชื่อ key ในโค้ดให้ตรงกับชื่อฟิลด์ใน Firebase Console
       busId: data['busId'] ?? '',
       busName: data['busName'] ?? '',
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
@@ -31,7 +28,6 @@ class Bus {
     );
   }
 
-  // สีของสายรถตาม busLine
   Color get lineColor {
     switch (busLine) {
       case 'red':
@@ -44,7 +40,6 @@ class Bus {
     }
   }
 
-  // ชื่อสายรถแบบเต็ม
   String get lineName {
     switch (busLine) {
       case 'red':
@@ -57,14 +52,12 @@ class Bus {
     }
   }
 
-  // คำนวณสถานะความหนาแน่น
   String get status {
     if (passengerCount > 19) return 'หนาแน่นมาก';
     if (passengerCount > 11) return 'ปานกลาง';
     return 'ไม่หนาแน่น';
   }
 
-  // สีสถานะตามจำนวนผู้โดยสาร
   Color get statusColor {
     if (passengerCount > 19) return Colors.red;
     if (passengerCount > 11) return Colors.orange;

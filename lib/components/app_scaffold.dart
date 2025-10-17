@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'custom_navigation_bar.dart';
-import 'app_bar.dart'; // นำเข้า AppBar ใหม่
+import 'app_bar.dart';
 import '../screens/route_map_screen.dart';
 import '../screens/map_screen.dart';
 import '../screens/passenger_density_screen.dart';
@@ -22,11 +22,9 @@ class _AppScaffoldState extends State<AppScaffold> {
   ];
 
   void _handleNotificationPress() {
-    // เพิ่ม logic การแจ้งเตือนที่นี่
   }
 
   void _handleSettingsPress() {
-    // เพิ่ม logic ตั้งค่าที่นี่
   }
 
   @override

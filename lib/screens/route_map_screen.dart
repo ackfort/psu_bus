@@ -7,12 +7,12 @@ class RouteMapScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: InteractiveViewer(
-        panEnabled: true, // อนุญาตให้เลื่อนภาพ
-        minScale: 0.5, // ซูมออกได้น้อยสุด 50%
-        maxScale: 3.0, // ซูมเข้าได้มากสุด 300%
+        panEnabled: true,
+        minScale: 0.5,
+        maxScale: 3.0,
         child: Center(
           child: Image.asset(
-            'assets/images/PSU-Bus-Routes.jpg', // เปลี่ยนเป็น path รูปของคุณ
+            'assets/images/PSU-Bus-Routes.jpg',
             fit: BoxFit.contain,
           ),
         ),

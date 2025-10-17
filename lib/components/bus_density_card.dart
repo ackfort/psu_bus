@@ -23,7 +23,6 @@ class BusDensityCard extends StatelessWidget {
     final Color textColor = isDarkMode ? Colors.white : Colors.grey.shade800;
 
     return Padding(
-      // เพิ่ม Padding รอบการ์ดเพื่อให้ห่างจากขอบ
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: GestureDetector(
         onTap: onTap,
@@ -49,11 +48,9 @@ class BusDensityCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row with bus info
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Bus line indicator
                   Container(
                     width: 4,
                     height: 40,
@@ -64,7 +61,6 @@ class BusDensityCard extends StatelessWidget {
                     ),
                   ),
                   
-                  // Bus info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -97,7 +93,6 @@ class BusDensityCard extends StatelessWidget {
                     ),
                   ),
                   
-                  // Status indicator
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -122,7 +117,6 @@ class BusDensityCard extends StatelessWidget {
 
               const SizedBox(height: 12),
               
-              // Passenger info with visual indicator
               Row(
                 children: [
                   Container(
@@ -155,14 +149,13 @@ class BusDensityCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // Passenger density indicator
                   SizedBox(
                     width: 80,
                     height: 6,
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
-                        value: bus.passengerCount / 50, // Assume max 50 passengers
+                        value: bus.passengerCount / 50,
                         backgroundColor: Colors.grey.shade300,
                         color: bus.statusColor,
                         minHeight: 6,

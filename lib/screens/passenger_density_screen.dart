@@ -6,7 +6,7 @@ import '../components/bus_stop_density_card.dart';
 import '../components/bus_density_card.dart';
 import '../components/density_filter_section.dart';
 import 'package:collection/collection.dart';
-import '../services/firestore_service.dart'; // Import the new service
+import '../services/firestore_service.dart';
 
 class PassengerDensityScreen extends StatefulWidget {
   const PassengerDensityScreen({super.key});
@@ -19,7 +19,7 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
   String selectedLine = 'ทั้งหมด';
   bool showBusStops = true;
   bool showBuses = true;
-  final FirestoreService _firestoreService = FirestoreService(); // Instantiate the service
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +41,7 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
                 children: [
                   if (showBusStops)
                     StreamBuilder<QuerySnapshot>(
-                      stream: _firestoreService.streamAllBusStops(), // Use the service
+                      stream: _firestoreService.streamAllBusStops(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildLoadingIndicator();
@@ -74,7 +74,7 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
 
                   if (showBuses)
                     StreamBuilder<QuerySnapshot>(
-                      stream: _firestoreService.streamAllBuses(), // Use the service
+                      stream: _firestoreService.streamAllBuses(),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return _buildLoadingIndicator();

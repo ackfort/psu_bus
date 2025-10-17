@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/bus_stop.dart';
 import '../models/bus.dart';
-import '../services/firestore_service.dart'; // Import the new service
+import '../services/firestore_service.dart';
 
 class BusStopBottomSheet extends StatefulWidget {
   final String selectedBusStopId;
@@ -33,27 +33,25 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
   List<Bus> _sameLineBuses = [];
   BusStop? _currentBusStop;
   bool _isLoading = true;
-  final FirestoreService _firestoreService =
-      FirestoreService(); // Instantiate the service
+  final FirestoreService _firestoreService = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    _fetchDataAndUpdate(); // Fetch data immediately on load
+    _fetchDataAndUpdate();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      _fetchDataAndUpdate(); // Fetch data every 1 second
+      _fetchDataAndUpdate();
     });
   }
 
   @override
   void dispose() {
-    _timer.cancel(); // Cancel the timer to prevent memory leaks
+    _timer.cancel();
     super.dispose();
   }
 
   Future<void> _fetchDataAndUpdate() async {
     try {
-      // Use the service to fetch all necessary data in one call
       final data = await _firestoreService.fetchSameLineData(
         widget.selectedBusLine,
         widget.selectedBusStopId,
@@ -63,7 +61,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
       _sameLineStops = data['sameLineStops'];
       _sameLineBuses = data['sameLineBuses'];
 
-      // Calculate total combined passengers
       int totalCombined = _currentBusStop?.passengerCount ?? 0;
       for (var stop in _sameLineStops) {
         totalCombined += stop.passengerCount;
@@ -72,7 +69,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
         totalCombined += bus.passengerCount;
       }
 
-      // Update state to trigger UI rebuild
       if (mounted) {
         setState(() {
           _totalCombinedPassengers = totalCombined;
@@ -80,7 +76,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
         });
       }
     } catch (e) {
-      // Handle errors gracefully, for example, by logging or showing a snackbar
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -90,13 +85,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     }
   }
 
-  // ❌ ลบฟังก์ชันที่ซ้ำซ้อนกับ BusStop Model
-  /*
-  Color _getStopDensityColor(int passengerCount) { ... }
-  Color _getStopDensityBackground(int passengerCount) { ... }
-  */
-
-  // ✅ เก็บ Logic สำหรับการรวมทั้งสายไว้ที่นี่ เนื่องจากเป็น Logic เฉพาะของ Widget นี้
   Color _getLineDensityColor(int totalPassengers) {
     if (totalPassengers >= 200) return Colors.red[600]!;
     if (totalPassengers >= 100) return Colors.amber[600]!;
@@ -118,13 +106,10 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading || _currentBusStop == null) {
-      return Container(); // Or a loading indicator
+      return Container();
     }
 
-    // 🌟 ใช้ Getter จาก Model โดยตรง
     final lineColor = _currentBusStop!.lineColor;
-    // final stopStatusColor = _currentBusStop!.statusColor;
-    // final stopStatus = _currentBusStop!.status;
 
     final bottomPadding = MediaQuery.of(context).padding.bottom + 10;
 
@@ -198,16 +183,12 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                   Expanded(
                     child: _buildInfoCard(
                       icon: Icons.directions_bus,
-                      // 🌟 ใช้ Getter จาก BusStop Model
-                      iconColor: _currentBusStop!.statusColor, 
+                      iconColor: _currentBusStop!.statusColor,
                       title: 'ป้ายนี้',
                       value: '${_currentBusStop!.passengerCount} คน',
-                      // 🌟 ใช้ Getter จาก BusStop Model
-                      status: _currentBusStop!.status, 
-                      // 🌟 ใช้ Getter จาก BusStop Model (สมมติว่าคุณต้องการสีอ่อน)
-                      backgroundColor: _currentBusStop!.statusColor.withOpacity(0.08), 
-                      // 🌟 ใช้ Getter จาก BusStop Model
-                      valueColor: _currentBusStop!.statusColor, 
+                      status: _currentBusStop!.status,
+                      backgroundColor: _currentBusStop!.statusColor.withOpacity(0.08),
+                      valueColor: _currentBusStop!.statusColor,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -229,7 +210,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Bus stops on the same line list
               if (_sameLineStops.isNotEmpty)
                 Column(
                   children: [
@@ -274,8 +254,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                           itemCount: _sameLineStops.length,
                           itemBuilder: (context, index) {
                             final stop = _sameLineStops[index];
-                            // 🌟 ใช้ Getter จาก BusStop Model
-                            final densityColor = stop.statusColor; 
+                            final densityColor = stop.statusColor;
                             return Container(
                               decoration: BoxDecoration(
                                 color:
@@ -307,8 +286,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        // 🌟 ใช้ Getter จาก BusStop Model
-                                        color: densityColor.withOpacity(0.08), 
+                                        color: densityColor.withOpacity(0.08),
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: densityColor.withOpacity(0.3),
@@ -322,8 +300,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                             width: 8,
                                             height: 8,
                                             decoration: BoxDecoration(
-                                              // 🌟 ใช้ Getter จาก BusStop Model
-                                              color: densityColor, 
+                                              color: densityColor,
                                               shape: BoxShape.circle,
                                             ),
                                           ),
@@ -333,8 +310,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                                             style: TextStyle(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w600,
-                                              // 🌟 ใช้ Getter จาก BusStop Model
-                                              color: densityColor, 
+                                              color: densityColor,
                                             ),
                                           ),
                                         ],
@@ -351,7 +327,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                   ],
                 ),
               if (_sameLineStops.isNotEmpty) const SizedBox(height: 16),
-              // Buses on the same line list
               if (_sameLineBuses.isNotEmpty)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,7 +366,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                           itemCount: _sameLineBuses.length,
                           itemBuilder: (context, index) {
                             final bus = _sameLineBuses[index];
-                            // 🌟 โค้ดส่วนนี้ใช้ bus.statusColor อยู่แล้ว ซึ่งมาจาก Bus Model
                             return Container(
                               decoration: BoxDecoration(
                                 color:
@@ -541,7 +515,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     );
   }
 
-  // ℹ️ Widget ส่วนนี้ไม่มีการเปลี่ยนแปลง
   Widget _buildDensityLegendItem(String text, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -557,7 +530,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     );
   }
 
-  // ℹ️ Widget ส่วนนี้ไม่มีการเปลี่ยนแปลง
   Widget _buildInfoCard({
     required IconData icon,
     required Color iconColor,

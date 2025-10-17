@@ -16,7 +16,7 @@ class CustomNavigationBar extends StatelessWidget {
     
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade100, // สีพื้นหลังเข้มขึ้นเล็กน้อย
+        color: Colors.grey.shade100,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -28,7 +28,7 @@ class CustomNavigationBar extends StatelessWidget {
       child: NavigationBar(
         onDestinationSelected: onTap,
         selectedIndex: currentIndex,
-        backgroundColor: Colors.transparent, // ใช้สีพื้นหลังจาก Container แทน
+        backgroundColor: Colors.transparent,
         indicatorColor: theme.colorScheme.primary,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         surfaceTintColor: Colors.transparent,
