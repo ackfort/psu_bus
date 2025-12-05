@@ -84,7 +84,7 @@ class _PassengerDensityScreenState extends State<PassengerDensityScreen> {
                         }
 
                         final allBuses = snapshot.data!.docs
-                            .map((doc) => Bus.fromFirestore(doc.data() as Map<String, dynamic>))
+                            .map((doc) => Bus.fromFirestore(doc))
                             .toList();
                         final filteredBuses = allBuses
                             .where((bus) =>

@@ -5,12 +5,10 @@ import '../models/bus.dart';
 import '../services/firestore_service.dart';
 
 class BusStopBottomSheet extends StatefulWidget {
-  final String selectedBusStopId;
-  final String selectedBusLine;
+  final BusStop selectedBusStop;
   final Function() onClose;
   final Function(double, double) onOpenMap;
   final Function(double, double) onOpenDirections;
-  final BusStop selectedBusStop;
 
   const BusStopBottomSheet({
     Key? key,
@@ -18,8 +16,6 @@ class BusStopBottomSheet extends StatefulWidget {
     required this.onClose,
     required this.onOpenMap,
     required this.onOpenDirections,
-    required this.selectedBusStopId,
-    required this.selectedBusLine,
   }) : super(key: key);
 
   @override
@@ -53,8 +49,8 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
   Future<void> _fetchDataAndUpdate() async {
     try {
       final data = await _firestoreService.fetchSameLineData(
-        widget.selectedBusLine,
-        widget.selectedBusStopId,
+        widget.selectedBusStop.busLine, // ใช้ field ใหม่
+        widget.selectedBusStop.stopId,  // ใช้ field ใหม่
       );
 
       _currentBusStop = data['currentBusStop'];
@@ -75,6 +71,8 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
           _isLoading = false;
         });
       }
+
+      debugPrint('Current BusStop: ${_currentBusStop?.name}, passengers: ${_currentBusStop?.passengerCount}');
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -110,7 +108,6 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     }
 
     final lineColor = _currentBusStop!.lineColor;
-
     final bottomPadding = MediaQuery.of(context).padding.bottom + 10;
 
     return Positioned(
@@ -137,46 +134,7 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 4,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: lineColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _currentBusStop!.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                        ),
-                        Text(
-                          _currentBusStop!.lineName,
-                          style: TextStyle(
-                            color: lineColor,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.close, size: 20, color: Colors.grey[600]),
-                    onPressed: widget.onClose,
-                  ),
-                ],
-              ),
+              _buildHeader(lineColor),
               const SizedBox(height: 16),
               Row(
                 children: [
@@ -199,315 +157,17 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
                       title: 'รวมทั้งสาย',
                       value: '$_totalCombinedPassengers คน',
                       status: _getLineDensityStatus(_totalCombinedPassengers),
-                      backgroundColor: _getLineDensityBackground(
-                        _totalCombinedPassengers,
-                      ),
-                      valueColor: _getLineDensityColor(
-                        _totalCombinedPassengers,
-                      ),
+                      backgroundColor: _getLineDensityBackground(_totalCombinedPassengers),
+                      valueColor: _getLineDensityColor(_totalCombinedPassengers),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              if (_sameLineStops.isNotEmpty)
-                Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(Icons.list, size: 18, color: Colors.grey[600]),
-                          const SizedBox(width: 8),
-                          Text(
-                            'ป้ายอื่นในสายนี้',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          const Spacer(),
-                          Row(
-                            children: [
-                              _buildDensityLegendItem('น้อย', Colors.green),
-                              const SizedBox(width: 8),
-                              _buildDensityLegendItem('ปานกลาง', Colors.amber),
-                              const SizedBox(width: 8),
-                              _buildDensityLegendItem('มาก', Colors.red),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 150),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _sameLineStops.length,
-                          itemBuilder: (context, index) {
-                            final stop = _sameLineStops[index];
-                            final densityColor = stop.statusColor;
-                            return Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    index.isOdd
-                                        ? Colors.grey.shade50
-                                        : Colors.white,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        stop.name,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: densityColor.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: densityColor.withOpacity(0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: densityColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            '${stop.passengerCount} คน',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: densityColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              if (_sameLineStops.isNotEmpty) const SizedBox(height: 16),
-              if (_sameLineBuses.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.directions_bus_filled,
-                            size: 18,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'รถเมล์ในสายนี้',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      constraints: const BoxConstraints(maxHeight: 150),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: ListView.builder(
-                          shrinkWrap: true,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _sameLineBuses.length,
-                          itemBuilder: (context, index) {
-                            final bus = _sameLineBuses[index];
-                            return Container(
-                              decoration: BoxDecoration(
-                                color:
-                                    index.isOdd
-                                        ? Colors.grey.shade50
-                                        : Colors.white,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        bus.busName,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: bus.statusColor.withOpacity(
-                                          0.08,
-                                        ),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: bus.statusColor.withOpacity(
-                                            0.3,
-                                          ),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Container(
-                                            width: 8,
-                                            height: 8,
-                                            decoration: BoxDecoration(
-                                              color: bus.statusColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            '${bus.passengerCount} คน',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                              color: bus.statusColor,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              if (_sameLineBuses.isNotEmpty) const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: Icon(
-                        Icons.map_outlined,
-                        size: 20,
-                        color: lineColor,
-                      ),
-                      label: Text(
-                        'ดูบนแผนที่',
-                        style: TextStyle(
-                          color: lineColor,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed:
-                          () => widget.onOpenMap(
-                            _currentBusStop!.latitude,
-                            _currentBusStop!.longitude,
-                          ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: lineColor,
-                        side: BorderSide(color: lineColor.withOpacity(0.5)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        backgroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      icon: const Icon(
-                        Icons.directions,
-                        size: 20,
-                        color: Colors.white,
-                      ),
-                      label: const Text(
-                        'นำทาง',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      onPressed:
-                          () => widget.onOpenDirections(
-                            _currentBusStop!.latitude,
-                            _currentBusStop!.longitude,
-                          ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: lineColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 2,
-                        shadowColor: lineColor.withOpacity(0.3),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              if (_sameLineStops.isNotEmpty) _buildSameLineStopsSection(),
+              if (_sameLineBuses.isNotEmpty) _buildSameLineBusesSection(),
+              const SizedBox(height: 16),
+              _buildActionButtons(lineColor),
             ],
           ),
         ),
@@ -515,15 +175,273 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
     );
   }
 
+  Widget _buildHeader(Color lineColor) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 40,
+          decoration: BoxDecoration(
+            color: lineColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _currentBusStop!.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  height: 1.2,
+                ),
+              ),
+              Text(
+                _currentBusStop!.lineName,
+                style: TextStyle(
+                  color: lineColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          icon: Icon(Icons.close, size: 20, color: Colors.grey[600]),
+          onPressed: widget.onClose,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSameLineStopsSection() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Icon(Icons.list, size: 18, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(
+                'ป้ายอื่นในสายนี้',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  _buildDensityLegendItem('น้อย', Colors.green),
+                  const SizedBox(width: 8),
+                  _buildDensityLegendItem('ปานกลาง', Colors.amber),
+                  const SizedBox(width: 8),
+                  _buildDensityLegendItem('มาก', Colors.red),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 150),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _sameLineStops.length,
+              itemBuilder: (context, index) {
+                final stop = _sameLineStops[index];
+                final densityColor = stop.statusColor;
+                return Container(
+                  decoration: BoxDecoration(
+                    color: index.isOdd ? Colors.grey.shade50 : Colors.white,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            stop.name,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: densityColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: densityColor.withOpacity(0.3), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(color: densityColor, shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${stop.passengerCount} คน',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: densityColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildSameLineBusesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Icon(Icons.directions_bus_filled, size: 18, color: Colors.grey[600]),
+              const SizedBox(width: 8),
+              Text(
+                'รถเมล์ในสายนี้',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          constraints: const BoxConstraints(maxHeight: 150),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: ListView.builder(
+              shrinkWrap: true,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _sameLineBuses.length,
+              itemBuilder: (context, index) {
+                final bus = _sameLineBuses[index];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: index.isOdd ? Colors.grey.shade50 : Colors.white,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            bus.busName,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: bus.statusColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: bus.statusColor.withOpacity(0.3), width: 1),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(color: bus.statusColor, shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${bus.passengerCount} คน',
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: bus.statusColor),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(Color lineColor) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: Icon(Icons.map_outlined, size: 20, color: lineColor),
+            label: Text(
+              'ดูบนแผนที่',
+              style: TextStyle(color: lineColor, fontWeight: FontWeight.w600),
+            ),
+            onPressed: () => widget.onOpenMap(_currentBusStop!.latitude, _currentBusStop!.longitude),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: lineColor,
+              side: BorderSide(color: lineColor.withOpacity(0.5)),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              backgroundColor: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.directions, size: 20, color: Colors.white),
+            label: const Text('นำทาง', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            onPressed: () => widget.onOpenDirections(_currentBusStop!.latitude, _currentBusStop!.longitude),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: lineColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+              shadowColor: lineColor.withOpacity(0.3),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDensityLegendItem(String text, Color color) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 4),
         Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
       ],
@@ -552,30 +470,13 @@ class _BusStopBottomSheetState extends State<BusStopBottomSheet> {
             children: [
               Icon(icon, size: 16, color: iconColor),
               const SizedBox(width: 4),
-              Text(
-                title,
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
+              Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: valueColor,
-            ),
-          ),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: valueColor)),
           const SizedBox(height: 2),
-          Text(
-            status,
-            style: TextStyle(
-              fontSize: 11,
-              color: valueColor,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(status, style: TextStyle(fontSize: 11, color: valueColor, fontWeight: FontWeight.w500)),
         ],
       ),
     );

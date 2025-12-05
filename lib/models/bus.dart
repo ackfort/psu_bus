@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Bus {
   final String busId;
@@ -17,14 +18,19 @@ class Bus {
     required this.busLine,
   });
 
-  factory Bus.fromFirestore(Map<String, dynamic> data) {
+  factory Bus.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+
     return Bus(
-      busId: data['busId'] ?? '',
-      busName: data['busName'] ?? '',
+      busId: doc.id,
+      busName: data['bus_name'] ?? '', // เปลี่ยนจาก 'busName' -> 'bus_name'
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
-      passengerCount: data['passengerCount'] ?? 0,
-      busLine: data['busLine'] ?? 'green',
+      passengerCount:
+          (data['people_count'] as num?)?.toInt() ??
+          0, // เปลี่ยนจาก 'passengerCount' -> 'people_count'
+      busLine:
+          data['bus_line'] ?? 'green', // เปลี่ยนจาก 'busLine' -> 'bus_line'
     );
   }
 
@@ -62,16 +68,5 @@ class Bus {
     if (passengerCount > 19) return Colors.red;
     if (passengerCount > 11) return Colors.orange;
     return Colors.green;
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'busId': busId,
-      'busName': busName,
-      'latitude': latitude,
-      'longitude': longitude,
-      'passengerCount': passengerCount,
-      'busLine': busLine,
-    };
   }
 }
