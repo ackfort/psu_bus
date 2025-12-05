@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "245368896114",
-    "project_id": "app-testing-28364",
-    "storage_bucket": "app-testing-28364.firebasestorage.app"
+    "project_number": "195725022475",
+    "firebase_url": "https://project-64960-default-rtdb.firebaseio.com",
+    "project_id": "project-64960",
+    "storage_bucket": "project-64960.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:245368896114:android:e98515acce0b766b21e0eb",
+        "mobilesdk_app_id": "1:195725022475:android:7c642b90ab017d64d1fe0e",
         "android_client_info": {
           "package_name": "com.example.psu_bus"
         }
@@ -15,7 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyABMw4R85URu4eTHz1ZQ8ViJEsaQD36DDg"
+          "current_key": "AIzaSyDUpEBgkHdMD8QK1eLDMt2qOy2lMiZzt1c"
         }
       ],
       "services": {
