@@ -58,7 +58,7 @@ class BusDataMonitor {
     bool stateChanged = false;
 
     for (var doc in snapshot.docs) {
-      final Bus bus = Bus.fromFirestore(doc.data() as Map<String, dynamic>);
+      final Bus bus = Bus.fromFirestore(doc);
       final String busId = bus.busId; 
 
       if (bus.passengerCount > _CROWD_THRESHOLD) {

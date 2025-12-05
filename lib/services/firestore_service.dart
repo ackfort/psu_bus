@@ -6,13 +6,13 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   Stream<DocumentSnapshot> streamSelectedBusStop(String stopId) {
-    return _db.collection('busStops').doc(stopId).snapshots();
+    return _db.collection('bus_stops').doc(stopId).snapshots();
   }
 
   Stream<QuerySnapshot> streamSameLineBusStops(String busLine, String selectedStopId) {
     return _db
-        .collection('busStops')
-        .where('busLine', isEqualTo: busLine)
+        .collection('bus_stops')
+        .where('bus_line', isEqualTo: busLine)
         .where(FieldPath.documentId, isNotEqualTo: selectedStopId)
         .snapshots();
   }
@@ -20,17 +20,17 @@ class FirestoreService {
   Stream<QuerySnapshot> streamSameLineBuses(String busLine) {
     return _db
         .collection('buses')
-        .where('busLine', isEqualTo: busLine)
+        .where('bus_line', isEqualTo: busLine)
         .snapshots();
   }
   
   Future<List<BusStop>> fetchAllBusStops() async {
-    final snapshot = await _db.collection('busStops').get();
+    final snapshot = await _db.collection('bus_stops').get();
     return snapshot.docs.map((doc) => BusStop.fromFirestore(doc)).toList();
   }
   
   Stream<QuerySnapshot> streamAllBusStops() {
-    return _db.collection('busStops').snapshots();
+    return _db.collection('bus_stops').snapshots();
   }
   
   Stream<QuerySnapshot> streamAllBuses() {
@@ -40,19 +40,19 @@ class FirestoreService {
   Future<Map<String, dynamic>> fetchSameLineData(String busLine, String selectedStopId) async {
     final List<Future<QuerySnapshot>> futures = [
       _db
-          .collection('busStops')
-          .where('busLine', isEqualTo: busLine)
+          .collection('bus_stops')
+          .where('bus_line', isEqualTo: busLine)
           .where(FieldPath.documentId, isEqualTo: selectedStopId)
           .limit(1)
           .get(),
       _db
-          .collection('busStops')
-          .where('busLine', isEqualTo: busLine)
+          .collection('bus_stops')
+          .where('bus_line', isEqualTo: busLine)
           .where(FieldPath.documentId, isNotEqualTo: selectedStopId)
           .get(),
       _db
           .collection('buses')
-          .where('busLine', isEqualTo: busLine)
+          .where('bus_line', isEqualTo: busLine)
           .get(),
     ];
 
@@ -67,7 +67,7 @@ class FirestoreService {
         .map((doc) => BusStop.fromFirestore(doc))
         .toList();
     final List<Bus> sameLineBuses = busDocs
-        .map((doc) => Bus.fromFirestore(doc.data() as Map<String, dynamic>))
+        .map((doc) => Bus.fromFirestore(doc))
         .toList();
 
     return {
