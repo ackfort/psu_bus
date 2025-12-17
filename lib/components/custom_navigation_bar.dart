@@ -13,6 +13,7 @@ class CustomNavigationBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    const customAppBarColor = Color(0xFF13396D);
     
     return Container(
       decoration: BoxDecoration(
@@ -29,7 +30,7 @@ class CustomNavigationBar extends StatelessWidget {
         onDestinationSelected: onTap,
         selectedIndex: currentIndex,
         backgroundColor: Colors.transparent,
-        indicatorColor: theme.colorScheme.primary,
+        indicatorColor: customAppBarColor,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         surfaceTintColor: Colors.transparent,
         destinations: <Widget>[

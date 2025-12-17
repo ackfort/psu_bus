@@ -1,3 +1,4 @@
+// map_screen.dart (ฉบับสมบูรณ์ที่แก้ไขแล้ว)
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:ui' as ui;
@@ -5,8 +6,10 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:async';
 import '../models/bus_stop.dart';
+import '../models/bus.dart';
 import '../components/bus_stop_bottom_sheet.dart';
 import '../services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -19,44 +22,52 @@ class _MapScreenState extends State<MapScreen> {
   late GoogleMapController mapController;
   final LatLng _hatYaiCenter = const LatLng(7.007692, 100.500510);
   bool _isLoading = true;
-  final Set<Marker> _markers = {};
+  final Set<Marker> _busStopMarkers =
+      {}; // Markers สำหรับป้ายรถเมล์ (โหลดครั้งเดียว)
+  final Set<Marker> _busMarkers = {}; // Markers สำหรับรถบัส (อัปเดต Real-time)
   BusStop? _selectedBusStop;
   bool _showBottomSheet = false;
-  Timer? _updateTimer;
   final FirestoreService _firestoreService = FirestoreService();
 
+  // Icons สำหรับป้ายรถเมล์
   BitmapDescriptor? redBusStopIcon;
   BitmapDescriptor? blueBusStopIcon;
   BitmapDescriptor? greenBusStopIcon;
+
+  // Icons สำหรับรถบัส (ใช้เพียงไฟล์เดียวตามที่ระบุ)
+  BitmapDescriptor? greenBusIcon;
 
   @override
   void initState() {
     super.initState();
     _loadCustomMarkers().then((_) {
-      _loadMapData();
-      _updateTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-        _updateMarkersOnly();
-      });
+      _loadBusStopData(); // โหลดป้ายรถเมล์ครั้งเดียว
     });
   }
 
   @override
   void dispose() {
-    _updateTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _loadCustomMarkers() async {
+    // โหลด Icon สำหรับป้ายรถเมล์
     redBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_red.png',
-      200,
+      70,
     );
     blueBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_blue.png',
-      200,
+      70,
     );
     greenBusStopIcon = await _getBitmapDescriptorFromAssetBytes(
       'assets/images/bus_stop_green.png',
+      70,
+    );
+
+    // โหลด Icon สำหรับรถบัส (ใช้ greenBusIcon สำหรับรถบัสทุกสาย)
+    greenBusIcon = await _getBitmapDescriptorFromAssetBytes(
+      'assets/images/bus_green.png',
       80,
     );
   }
@@ -80,37 +91,47 @@ class _MapScreenState extends State<MapScreen> {
     return BitmapDescriptor.fromBytes(resizedByteData.buffer.asUint8List());
   }
 
-  Future<void> _loadMapData() async {
+  // โหลดข้อมูลป้ายรถเมล์ (Bus Stops) ครั้งเดียว
+  Future<void> _loadBusStopData() async {
     try {
       final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
-      final newMarkers = _createMarkers(busStops);
+      final newMarkers = _createBusStopMarkers(busStops);
       setState(() {
-        _markers.addAll(newMarkers);
+        _busStopMarkers.addAll(newMarkers);
         _isLoading = false;
       });
     } catch (e) {
-      debugPrint("Failed to load data from Firestore: $e");
+      debugPrint("Failed to load bus stop data from Firestore: $e");
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _updateMarkersOnly() async {
-    try {
-      final List<BusStop> busStops = await _firestoreService.fetchAllBusStops();
-      final Set<Marker> newMarkers = _createMarkers(busStops);
+  // สร้าง Markers สำหรับรถบัสจากข้อมูล List<Bus> ที่ได้รับ Real-time
+  Set<Marker> _createBusMarkers(List<Bus> buses) {
+    final Set<Marker> markers = {};
+    // ใช้ greenBusIcon สำหรับรถบัสทุกสาย
+    BitmapDescriptor? markerIcon = greenBusIcon;
 
-      if (!setEquals(_markers, newMarkers)) {
-        setState(() {
-          _markers.clear();
-          _markers.addAll(newMarkers);
-        });
-      }
-    } catch (e) {
-      debugPrint("Failed to update markers from Firestore: $e");
+    for (final bus in buses) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('bus_${bus.busId}'),
+          position: LatLng(bus.latitude, bus.longitude),
+          icon:
+              markerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
+          infoWindow: InfoWindow(
+            title: bus.busName,
+            snippet: 'ผู้โดยสาร: ${bus.passengerCount} (${bus.status})',
+          ),
+        ),
+      );
     }
+    return markers;
   }
 
-  Set<Marker> _createMarkers(List<BusStop> stops) {
+  // สร้าง Markers สำหรับป้ายรถเมล์
+  Set<Marker> _createBusStopMarkers(List<BusStop> stops) {
     final Set<Marker> markers = {};
     for (final stop in stops) {
       BitmapDescriptor? markerIcon;
@@ -144,23 +165,21 @@ class _MapScreenState extends State<MapScreen> {
     return markers;
   }
 
-  bool setEquals(Set? set1, Set? set2) {
-    if (set1 == null && set2 == null) {
-      return true;
-    }
-    if (set1 == null || set2 == null || set1.length != set2.length) {
-      return false;
-    }
-    return set1.every((element) => set2.contains(element));
-  }
-
   Future<void> _openGoogleMap(double lat, double lng) async {
-    // Corrected Uri to open a general map view focused on the location
-    final Uri url = Uri.parse('https://maps.google.com/?q=$lat,$lng');
+    // แก้ไข URL ให้ถูกต้องเพื่อเปิดแผนที่ที่พิกัดนั้น
+    final Uri url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+    );
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      throw 'Cannot open Google Maps.';
+      // ใช้ fallback URL ที่เป็นสากลมากขึ้น
+      final Uri fallbackUrl = Uri.parse('https://maps.apple.com/?q=$lat,$lng');
+      if (await canLaunchUrl(fallbackUrl)) {
+        await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Cannot open Google Maps or Apple Maps.';
+      }
     }
   }
 
@@ -169,7 +188,15 @@ class _MapScreenState extends State<MapScreen> {
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      throw 'Cannot open directions in Google Maps.';
+      // Fallback for web or non-Android devices (using general URL)
+      final Uri fallbackUrl = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+      );
+      if (await canLaunchUrl(fallbackUrl)) {
+        await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Cannot open directions in Google Maps.';
+      }
     }
   }
 
@@ -180,20 +207,48 @@ class _MapScreenState extends State<MapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : GoogleMap(
+          // **ใช้ StreamBuilder เพื่อรับข้อมูลรถบัสแบบ Real-time**
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestoreService.streamAllBuses(),
+            builder: (context, snapshot) {
+              // 1. แสดง Loading Screen ในการโหลดครั้งแรก
+              if (_isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              // 2. จัดการข้อมูลที่ได้รับ Real-time
+              if (snapshot.hasData) {
+                final List<Bus> buses =
+                    snapshot.data!.docs
+                        .map((doc) => Bus.fromFirestore(doc))
+                        .toList();
+
+                // อัปเดต Marker รถบัส
+                _busMarkers.clear();
+                _busMarkers.addAll(_createBusMarkers(buses));
+              } else if (snapshot.hasError) {
+                debugPrint('Error loading bus data: ${snapshot.error}');
+              }
+
+              // **รวม Marker ทั้งหมด** (ป้ายรถเมล์ + รถบัส)
+              final Set<Marker> allMarkers = _busStopMarkers.union(_busMarkers);
+
+              // 3. แสดงแผนที่
+              return GoogleMap(
                 onMapCreated: (controller) {
                   mapController = controller;
-                  controller.animateCamera(
-                    CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
-                  );
+                  // ตั้งค่าเริ่มต้นของกล้อง (ทำเพียงครั้งเดียว)
+                  if (_busStopMarkers.isNotEmpty) {
+                    controller.animateCamera(
+                      CameraUpdate.newLatLngZoom(_hatYaiCenter, 17),
+                    );
+                  }
                 },
                 initialCameraPosition: CameraPosition(
                   target: _hatYaiCenter,
                   zoom: 17,
                 ),
-                markers: _markers,
+                markers: allMarkers,
                 myLocationEnabled: true,
                 myLocationButtonEnabled: true,
                 zoomControlsEnabled: false,
@@ -203,7 +258,11 @@ class _MapScreenState extends State<MapScreen> {
                     _showBottomSheet = false;
                   });
                 },
-              ),
+              );
+            },
+          ),
+
+          // แสดง Bottom Sheet เมื่อมีป้ายรถเมล์ถูกเลือก
           if (_showBottomSheet && _selectedBusStop != null)
             Positioned(
               left: 16,

@@ -27,8 +27,8 @@ class BusStopDensityCard extends StatelessWidget {
         isSelected
             ? busStop.lineColor
             : isDarkMode
-                ? Colors.grey.shade700
-                : Colors.grey.shade300;
+            ? Colors.grey.shade700
+            : Colors.grey.shade300;
     final Color textColor = isDarkMode ? Colors.white : Colors.grey.shade800;
     final densityColor = _getDensityColor(busStop.passengerCount);
 
@@ -160,7 +160,7 @@ class BusStopDensityCard extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
-                        value: busStop.passengerCount / 50,
+                        value: busStop.passengerCount / 25,
                         backgroundColor: Colors.grey.shade300,
                         color: densityColor,
                         minHeight: 6,

@@ -11,57 +11,70 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  // กำหนดความสูงของ AppBar ที่ปรับปรุงแล้ว
+  Size get preferredSize => const Size.fromHeight(70.0); // เพิ่มความสูงจากค่าเริ่มต้น (56.0)
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // กำหนดสีตามภาพตัวอย่างที่คุณให้มา
+    const customAppBarColor = Color(0xFF13396D); // สีน้ำเงินเข้ม
+    const customTextColor = Colors.white; // สีข้อความหลัก
+    
+    // แก้ไขปัญหา 'Methods can't be invoked in constant expressions'
+    // โดยการแปลง Colors.black.withOpacity(0.3) เป็น Hex Code (0x4D000000)
+    const shadowColorDark = Color(0x4D000000); 
 
     return AppBar(
-      title: LayoutBuilder(
-        builder: (context, constraints) {
-          final availableWidth = constraints.maxWidth - 120;
-
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.directions_bus,
-                size: 30,
-                color: theme.colorScheme.onPrimary,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  'PSU Passenger Counting System',
-                  style: TextStyle(
-                    fontSize: _calculateFontSize(availableWidth),
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-            ],
-          );
-        },
+      // กำหนดสีพื้นหลัง AppBar
+      backgroundColor: customAppBarColor, 
+      
+      // ทำให้ Title อยู่ตรงกลาง
+      centerTitle: true, 
+      
+      // ปรับความสูงของ AppBar เพื่อเพิ่ม Padding แนวตั้ง
+      toolbarHeight: 70.0, // เพิ่มความสูง/padding 
+      
+      title: const Text(
+        'PSUBUS',
+        style: TextStyle(
+          fontSize: 36, // 💡 ลดขนาดตัวอักษรลง (จาก 48 เป็น 36)
+          fontWeight: FontWeight.w900, 
+          color: customTextColor, 
+          
+          // ส่วนสำหรับสร้างเอฟเฟกต์ขอบเงา (Outline/Shadow)
+          shadows: [
+            // เงาแรก: สร้างขอบสีเข้ม/น้ำเงินรอบข้อความ
+            Shadow(
+              blurRadius: 0.0, 
+              color: customAppBarColor, 
+              offset: Offset(2.0, 2.0), 
+            ),
+            Shadow(
+              blurRadius: 0.0,
+              color: customAppBarColor,
+              offset: Offset(-2.0, -2.0), 
+            ),
+             Shadow(
+              blurRadius: 0.0,
+              color: customAppBarColor,
+              offset: Offset(2.0, -2.0), 
+            ),
+             Shadow(
+              blurRadius: 0.0,
+              color: customAppBarColor,
+              offset: Offset(-2.0, 2.0), 
+            ),
+            // เงาที่สอง: เงาสีดำเพื่อความลึก (ใช้ const Color ที่ถูกแก้ไขแล้ว)
+            Shadow(
+              blurRadius: 4.0, 
+              color: shadowColorDark, 
+              offset: Offset(4.0, 4.0), 
+            ),
+          ],
+        ),
       ),
-      backgroundColor: theme.colorScheme.primary,
+      
+      // actions: ถูกลบออกไปแล้ว
     );
-  }
-
-  double _calculateFontSize(double availableWidth) {
-    const fullText = 'PSU Passenger Counting System';
-    const baseFontSize = 20.0;
-    const minFontSize = 14.0;
-
-    final textWidth = fullText.length * baseFontSize * 0.6;
-
-    if (textWidth > availableWidth) {
-      final adjustedSize = availableWidth / fullText.length / 0.6;
-      return adjustedSize.clamp(minFontSize, baseFontSize);
-    }
-    return baseFontSize;
   }
 }

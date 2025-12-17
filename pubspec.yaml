@@ -39,6 +39,7 @@ dependencies:
   workmanager: ^0.7.0
   flutter_local_notifications: ^17.1.2
   shared_preferences: ^2.0.0
+  flutter_launcher_icons: "^0.13.1"
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -71,7 +72,9 @@ flutter:
   - assets/images/PSU-Bus-Routes.jpg
   - assets/images/bus_stop_red.png  
   - assets/images/bus_stop_blue.png  
-  - assets/images/bus_stop_green.png  
+  - assets/images/bus_stop_green.png 
+  - assets/images/bus_green.png  
+  - assets/images/psubuslogo.png
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -99,3 +102,10 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: "launcher_icon" # ชื่อไฟล์ที่จะใช้ใน Android (ไม่จำเป็นต้องเปลี่ยน)
+  ios: true                # ให้สร้างไอคอนสำหรับ iOS ด้วย
+  image_path: "assets/images/psubuslogo.png" # <-- ใช้ไฟล์โลโก้ที่คุณระบุ
+  min_sdk_android: 21      # กำหนด min SDK ของ Android (มักจะเป็น 21)
+  remove_alpha_ios: true   # แนะนำให้เอา Alpha channel ออกสำหรับ iOS

@@ -17,9 +17,12 @@ class BusDensityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final Color cardColor = isDarkMode ? Colors.grey.shade900 : Colors.white;
-    final Color borderColor = isSelected 
-        ? bus.lineColor 
-        : isDarkMode ? Colors.grey.shade700 : Colors.grey.shade300;
+    final Color borderColor =
+        isSelected
+            ? bus.lineColor
+            : isDarkMode
+            ? Colors.grey.shade700
+            : Colors.grey.shade300;
     final Color textColor = isDarkMode ? Colors.white : Colors.grey.shade800;
 
     return Padding(
@@ -32,10 +35,7 @@ class BusDensityCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: cardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1,
-            ),
+            border: Border.all(color: borderColor, width: isSelected ? 1.5 : 1),
             boxShadow: [
               if (!isDarkMode)
                 BoxShadow(
@@ -60,7 +60,7 @@ class BusDensityCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,7 +75,10 @@ class BusDensityCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: bus.lineColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(6),
@@ -92,9 +95,12 @@ class BusDensityCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  
+
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: bus.statusColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -116,7 +122,7 @@ class BusDensityCard extends StatelessWidget {
               ),
 
               const SizedBox(height: 12),
-              
+
               Row(
                 children: [
                   Container(
@@ -134,10 +140,7 @@ class BusDensityCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     'ผู้โดยสาร',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
                   ),
                   const SizedBox(width: 4),
                   Text(
@@ -155,7 +158,7 @@ class BusDensityCard extends StatelessWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
-                        value: bus.passengerCount / 50,
+                        value: bus.passengerCount / 25,
                         backgroundColor: Colors.grey.shade300,
                         color: bus.statusColor,
                         minHeight: 6,
